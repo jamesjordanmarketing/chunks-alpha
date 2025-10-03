@@ -17,15 +17,78 @@ const dimensionKeyMap: Record<string, string> = {
 };
 
 /**
+ * Tag slug to UUID mapping
+ * Maps frontend tag keys/slugs to database UUIDs
+ */
+const tagSlugToUuidMap: Record<string, string> = {
+  // Authorship
+  'brand-company': '550e8400-e29b-41d4-a716-446655440007',
+  'team-member': '550e8400-e29b-41d4-a716-446655440008',
+  'customer': '550e8400-e29b-41d4-a716-446655440024',
+  'mixed-collaborative': '550e8400-e29b-41d4-a716-446655440025',
+  'third-party': '550e8400-e29b-41d4-a716-446655440026',
+  
+  // Content Format
+  'how-to-guide': '550e8400-e29b-41d4-a716-446655440027',
+  'strategy-note': '550e8400-e29b-41d4-a716-446655440028',
+  'case-study': '550e8400-e29b-41d4-a716-446655440029',
+  'story-narrative': '550e8400-e29b-41d4-a716-446655440030',
+  'sales-page': '550e8400-e29b-41d4-a716-446655440031',
+  'email': '550e8400-e29b-41d4-a716-446655440032',
+  'transcript': '550e8400-e29b-41d4-a716-446655440033',
+  'presentation-slide': '550e8400-e29b-41d4-a716-446655440034',
+  'whitepaper': '550e8400-e29b-41d4-a716-446655440035',
+  'brief-summary': '550e8400-e29b-41d4-a716-446655440036',
+  
+  // Disclosure Risk
+  'level-1-minimal-risk': '550e8400-e29b-41d4-a716-446655440009',
+  'level-2-low-risk': '550e8400-e29b-41d4-a716-446655440037',
+  'level-3-moderate-risk': '550e8400-e29b-41d4-a716-446655440038',
+  'level-4-high-risk': '550e8400-e29b-41d4-a716-446655440039',
+  'level-5-critical-risk': '550e8400-e29b-41d4-a716-446655440040',
+  
+  // Intended Use
+  'training': '550e8400-e29b-41d4-a716-446655440010',
+  'marketing': '550e8400-e29b-41d4-a716-446655440011',
+  'sales-enablements': '550e8400-e29b-41d4-a716-446655440041',
+  'delivery-operations': '550e8400-e29b-41d4-a716-446655440042',
+  'investor-relations': '550e8400-e29b-41d4-a716-446655440043',
+  'legal-compliance': '550e8400-e29b-41d4-a716-446655440044',
+  
+  // Evidence Types
+  'metrics-kpis': '550e8400-e29b-41d4-a716-446655440045',
+  'quotes-testimonials': '550e8400-e29b-41d4-a716-446655440046',
+  'before-after-results': '550e8400-e29b-41d4-a716-446655440047',
+  'screenshots-visuals': '550e8400-e29b-41d4-a716-446655440048',
+  'data-tables': '550e8400-e29b-41d4-a716-446655440049',
+  'external-references': '550e8400-e29b-41d4-a716-446655440050',
+  
+  // Audience Level
+  'public': '550e8400-e29b-41d4-a716-446655440051',
+  'lead': '550e8400-e29b-41d4-a716-446655440052',
+  'customer-audience': '550e8400-e29b-41d4-a716-446655440053',
+  'internal': '550e8400-e29b-41d4-a716-446655440054',
+  'executive': '550e8400-e29b-41d4-a716-446655440055',
+  
+  // Gating Level
+  'public-gating': '550e8400-e29b-41d4-a716-446655440056',
+  'ungated-email': '550e8400-e29b-41d4-a716-446655440057',
+  'soft-gated': '550e8400-e29b-41d4-a716-446655440058',
+  'hard-gated': '550e8400-e29b-41d4-a716-446655440059',
+  'internal-only': '550e8400-e29b-41d4-a716-446655440060',
+  'nda-only': '550e8400-e29b-41d4-a716-446655440061'
+};
+
+/**
  * Transform frontend tag format to database format
- * Converts: { 'dimension-key': ['tag-uuid'] } → [{ tagId: 'uuid', dimensionId: 'uuid' }]
+ * Converts: { 'dimension-key': ['tag-slug'] } → [{ tagId: 'uuid', dimensionId: 'uuid' }]
  */
 function transformTagsToNormalized(
   selectedTags: Record<string, string[]>
 ): Array<{ tagId: string; dimensionId: string }> {
   const result = [];
   
-  for (const [dimensionKey, tagIds] of Object.entries(selectedTags)) {
+  for (const [dimensionKey, tagSlugs] of Object.entries(selectedTags)) {
     const dimensionId = dimensionKeyMap[dimensionKey];
     
     if (!dimensionId) {
@@ -33,7 +96,15 @@ function transformTagsToNormalized(
       continue;
     }
     
-    for (const tagId of tagIds) {
+    for (const tagSlug of tagSlugs) {
+      // Convert tag slug to UUID (or use as-is if already a UUID)
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const tagId = tagSlug.match(UUID_REGEX) ? tagSlug : (tagSlugToUuidMap[tagSlug] || tagSlug);
+      
+      if (!tagSlugToUuidMap[tagSlug] && !tagSlug.match(UUID_REGEX)) {
+        console.warn(`Unknown tag slug: ${tagSlug} - using as-is`);
+      }
+      
       result.push({ tagId, dimensionId });
     }
   }
