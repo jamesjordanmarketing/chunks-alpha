@@ -5,9 +5,12 @@ interface Props {
   params: {
     documentId: string
   }
+  searchParams: {
+    workflowId?: string
+  }
 }
 
-export default function CompletePage({ params }: Props) {
+export default function CompletePage({ params, searchParams }: Props) {
   return (
     <div className="container mx-auto px-6 py-8">
       <Suspense fallback={
@@ -21,7 +24,10 @@ export default function CompletePage({ params }: Props) {
           </div>
         </div>
       }>
-        <WorkflowCompleteServer documentId={params.documentId} />
+        <WorkflowCompleteServer 
+          documentId={params.documentId}
+          workflowId={searchParams.workflowId}
+        />
       </Suspense>
     </div>
   )

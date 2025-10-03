@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card } from "../ui/card"
 import { Button } from "../ui/button"
@@ -29,30 +29,82 @@ interface Props {
     processingEstimate: string
     status: string
   }
+  workflowData?: {  // NEW: Optional database workflow data
+    session: any
+    category: any
+    tags: {
+      raw: any[]
+      byDimension: Record<string, any[]>
+    }
+  } | null
 }
 
-export function WorkflowCompleteClient({ document, tagDimensions, workflowSummary }: Props) {
+export function WorkflowCompleteClient({ document, tagDimensions, workflowSummary, workflowData }: Props) {
   const router = useRouter()
-  const { 
-    belongingRating,
-    selectedCategory,
-    selectedTags,
-    resetWorkflow,
-    submitWorkflow
-  } = useWorkflowStore()
+  const workflowStore = useWorkflowStore()
+
+  // Use database data if available, otherwise fall back to store
+  const belongingRating = workflowData?.category?.belonging_rating ?? workflowStore.belongingRating
+  const selectedCategory = workflowData?.category?.categories ?? workflowStore.selectedCategory
+  
+  // Transform normalized tags to display format if from database
+  const selectedTags = useMemo(() => {
+    if (workflowData?.tags?.raw && workflowData.tags.raw.length > 0) {
+      // Transform normalized tags to frontend format
+      const dimensionIdToKey: Record<string, string> = {
+        '550e8400-e29b-41d4-a716-446655440003': 'authorship',
+        '550e8400-e29b-41d4-a716-446655440004': 'format',
+        '550e8400-e29b-41d4-a716-446655440005': 'disclosure-risk',
+        '550e8400-e29b-41d4-a716-446655440006': 'intended-use',
+        '550e8400-e29b-41d4-a716-446655440021': 'evidence-type',
+        '550e8400-e29b-41d4-a716-446655440022': 'audience-level',
+        '550e8400-e29b-41d4-a716-446655440023': 'gating-level'
+      }
+
+      const grouped: Record<string, string[]> = {}
+      
+      workflowData.tags.raw.forEach((tagAssignment: any) => {
+        const dimensionKey = dimensionIdToKey[tagAssignment.dimension_id]
+        if (!dimensionKey) return
+        
+        if (!grouped[dimensionKey]) {
+          grouped[dimensionKey] = []
+        }
+        grouped[dimensionKey].push(tagAssignment.tag_id)
+      })
+      
+      return grouped
+    }
+    
+    return workflowStore.selectedTags
+  }, [workflowData, workflowStore.selectedTags])
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showProcessingDetails, setShowProcessingDetails] = useState(false)
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    await submitWorkflow()
-    setIsSubmitting(false)
-    router.push('/dashboard')
+    try {
+      const workflowId = await workflowStore.submitWorkflow()
+      setIsSubmitting(false)
+      
+      // If workflow was already submitted (workflowData exists), go to dashboard
+      // Otherwise, refresh page with workflowId to show database data
+      if (workflowData) {
+        router.push('/dashboard')
+      } else if (workflowId) {
+        router.push(`/workflow/${document.id}/complete?workflowId=${workflowId}`)
+      } else {
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      console.error('Submit error:', error)
+      setIsSubmitting(false)
+    }
   }
 
   const handleStartNew = () => {
-    resetWorkflow()
+    workflowStore.resetWorkflow()
     router.push('/dashboard')
   }
 

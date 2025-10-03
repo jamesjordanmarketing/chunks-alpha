@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+/**
+ * Dimension key mapping for frontend → database UUID conversion
+ * Maps frontend string keys to database dimension UUIDs
+ */
+const dimensionKeyMap: Record<string, string> = {
+  'authorship': '550e8400-e29b-41d4-a716-446655440003',
+  'format': '550e8400-e29b-41d4-a716-446655440004',
+  'disclosure-risk': '550e8400-e29b-41d4-a716-446655440005',
+  'intended-use': '550e8400-e29b-41d4-a716-446655440006',
+  'evidence-type': '550e8400-e29b-41d4-a716-446655440021',
+  'audience-level': '550e8400-e29b-41d4-a716-446655440022',
+  'gating-level': '550e8400-e29b-41d4-a716-446655440023'
+};
+
 export interface Document {
   id: string;
   title: string;
@@ -81,8 +95,12 @@ export interface WorkflowState {
   validateStep: (step: string) => boolean;
   saveDraft: () => Promise<void>;
   resetWorkflow: () => void;
-  submitWorkflow: () => Promise<void>;
+  submitWorkflow: () => Promise<string | void>;
   loadExistingWorkflow: (documentId: string) => Promise<void>;
+  
+  // Transformation helpers for normalized database
+  getTagsForSubmission: () => Array<{ tagId: string; dimensionId: string }>;
+  loadTagsFromNormalized: (tags: Array<{ tag_id: string; dimension_id: string }>) => void;
 }
 
 export const useWorkflowStore = create<WorkflowState>()(
@@ -297,6 +315,9 @@ export const useWorkflowStore = create<WorkflowState>()(
               completedSteps: ['A', 'B', 'C'],
               lastSaved: new Date().toISOString()
             });
+            
+            // Return workflow ID so it can be used in redirect
+            return data.workflowId;
           } else {
             throw new Error(data.error || 'Submission failed');
           }
@@ -358,6 +379,63 @@ export const useWorkflowStore = create<WorkflowState>()(
         } catch (error) {
           console.error('Error loading existing workflow:', error);
         }
+      },
+
+      /**
+       * Transform store tags format to API submission format
+       * Used when submitting workflow to API
+       * Converts: { 'dimension-key': ['tag-uuid'] } → [{ tagId: 'uuid', dimensionId: 'uuid' }]
+       */
+      getTagsForSubmission: () => {
+        const state = get();
+        const result: Array<{ tagId: string; dimensionId: string }> = [];
+        
+        for (const [dimensionKey, tagIds] of Object.entries(state.selectedTags)) {
+          const dimensionId = dimensionKeyMap[dimensionKey];
+          
+          if (!dimensionId) {
+            console.warn(`Unknown dimension key during submission: ${dimensionKey}`);
+            continue;
+          }
+          
+          if (Array.isArray(tagIds)) {
+            for (const tagId of tagIds) {
+              result.push({ tagId, dimensionId });
+            }
+          }
+        }
+        
+        return result;
+      },
+
+      /**
+       * Load tags from normalized database format into store format
+       * Used when loading existing workflow data from normalized tables
+       * Converts: [{ tag_id: 'uuid', dimension_id: 'uuid' }] → { 'dimension-key': ['tag-uuid'] }
+       */
+      loadTagsFromNormalized: (tags: Array<{ tag_id: string; dimension_id: string }>) => {
+        const grouped: Record<string, string[]> = {};
+        
+        // Reverse map: UUID → key
+        const dimensionIdToKey = Object.entries(dimensionKeyMap).reduce(
+          (acc, [key, id]) => ({ ...acc, [id]: key }),
+          {} as Record<string, string>
+        );
+        
+        tags.forEach(tag => {
+          const dimensionKey = dimensionIdToKey[tag.dimension_id];
+          if (!dimensionKey) {
+            console.warn(`Unknown dimension ID when loading: ${tag.dimension_id}`);
+            return;
+          }
+          
+          if (!grouped[dimensionKey]) {
+            grouped[dimensionKey] = [];
+          }
+          grouped[dimensionKey].push(tag.tag_id);
+        });
+        
+        set({ selectedTags: grouped });
       },
     }),
     {

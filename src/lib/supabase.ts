@@ -199,6 +199,117 @@ export type Database = {
           updated_at?: string;
         };
       };
+      document_categories: {
+        Row: {
+          id: string;
+          document_id: string;
+          category_id: string;
+          workflow_session_id: string;
+          belonging_rating: number;
+          assigned_by: string;
+          assigned_at: string;
+          is_primary: boolean;
+          confidence_score: number | null;
+        };
+        Insert: {
+          id?: string;
+          document_id: string;
+          category_id: string;
+          workflow_session_id: string;
+          belonging_rating: number;
+          assigned_by: string;
+          assigned_at?: string;
+          is_primary?: boolean;
+          confidence_score?: number | null;
+        };
+        Update: {
+          id?: string;
+          document_id?: string;
+          category_id?: string;
+          workflow_session_id?: string;
+          belonging_rating?: number;
+          assigned_by?: string;
+          assigned_at?: string;
+          is_primary?: boolean;
+          confidence_score?: number | null;
+        };
+      };
+      document_tags: {
+        Row: {
+          id: string;
+          document_id: string;
+          tag_id: string;
+          dimension_id: string;
+          workflow_session_id: string;
+          assigned_by: string;
+          assigned_at: string;
+          is_custom_tag: boolean;
+          custom_tag_data: Record<string, any> | null;
+          confidence_score: number | null;
+        };
+        Insert: {
+          id?: string;
+          document_id: string;
+          tag_id: string;
+          dimension_id: string;
+          workflow_session_id: string;
+          assigned_by: string;
+          assigned_at?: string;
+          is_custom_tag?: boolean;
+          custom_tag_data?: Record<string, any> | null;
+          confidence_score?: number | null;
+        };
+        Update: {
+          id?: string;
+          document_id?: string;
+          tag_id?: string;
+          dimension_id?: string;
+          workflow_session_id?: string;
+          assigned_by?: string;
+          assigned_at?: string;
+          is_custom_tag?: boolean;
+          custom_tag_data?: Record<string, any> | null;
+          confidence_score?: number | null;
+        };
+      };
+      custom_tags: {
+        Row: {
+          id: string;
+          dimension_id: string;
+          name: string;
+          description: string | null;
+          created_by: string;
+          organization_id: string | null;
+          usage_count: number;
+          created_at: string;
+          updated_at: string;
+          is_approved: boolean;
+        };
+        Insert: {
+          id?: string;
+          dimension_id: string;
+          name: string;
+          description?: string | null;
+          created_by: string;
+          organization_id?: string | null;
+          usage_count?: number;
+          created_at?: string;
+          updated_at?: string;
+          is_approved?: boolean;
+        };
+        Update: {
+          id?: string;
+          dimension_id?: string;
+          name?: string;
+          description?: string | null;
+          created_by?: string;
+          organization_id?: string | null;
+          usage_count?: number;
+          created_at?: string;
+          updated_at?: string;
+          is_approved?: boolean;
+        };
+      };
     };
   };
 };

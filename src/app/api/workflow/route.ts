@@ -1,5 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { workflowService } from '@/lib/database'
+
+/**
+ * Dimension key mapping for frontend → database UUID conversion
+ * Maps frontend string keys to database dimension UUIDs
+ */
+const dimensionKeyMap: Record<string, string> = {
+  'authorship': '550e8400-e29b-41d4-a716-446655440003',
+  'format': '550e8400-e29b-41d4-a716-446655440004',
+  'disclosure-risk': '550e8400-e29b-41d4-a716-446655440005',
+  'intended-use': '550e8400-e29b-41d4-a716-446655440006',
+  'evidence-type': '550e8400-e29b-41d4-a716-446655440021',
+  'audience-level': '550e8400-e29b-41d4-a716-446655440022',
+  'gating-level': '550e8400-e29b-41d4-a716-446655440023'
+};
+
+/**
+ * Transform frontend tag format to database format
+ * Converts: { 'dimension-key': ['tag-uuid'] } → [{ tagId: 'uuid', dimensionId: 'uuid' }]
+ */
+function transformTagsToNormalized(
+  selectedTags: Record<string, string[]>
+): Array<{ tagId: string; dimensionId: string }> {
+  const result = [];
+  
+  for (const [dimensionKey, tagIds] of Object.entries(selectedTags)) {
+    const dimensionId = dimensionKeyMap[dimensionKey];
+    
+    if (!dimensionId) {
+      console.warn(`Unknown dimension key: ${dimensionKey}`);
+      continue;
+    }
+    
+    for (const tagId of tagIds) {
+      result.push({ tagId, dimensionId });
+    }
+  }
+  
+  return result;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -212,39 +252,144 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // Submit complete workflow
-        const { data: submitData, error: submitError } = await supabase
-          .from('workflow_sessions')
-          .insert({
-            document_id: realDocumentId,
-            user_id: user.id,
-            step: 'complete',
-            belonging_rating: belongingRating,
-            selected_category_id: realCategoryId,
-            selected_tags: selectedTags,
-            custom_tags: customTags || [],
-            is_draft: false,
-            completed_steps: ['A', 'B', 'C'],
-            completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+        // Feature flag: Use normalized structure or legacy JSONB storage
+        // During migration period, this allows safe rollback to old method
+        const USE_NORMALIZED = process.env.NEXT_PUBLIC_USE_NORMALIZED_TAGS === 'true';
+
+        if (USE_NORMALIZED) {
+          // ===== NEW NORMALIZED METHOD =====
+          // Uses junction tables: document_categories, document_tags, custom_tags
+          
+          try {
+            // First, check if there's an existing session or create one
+            const { data: existingSession } = await supabase
+              .from('workflow_sessions')
+              .select('id')
+              .eq('document_id', realDocumentId)
+              .eq('user_id', user.id)
+              .eq('is_draft', true)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            let workflowSessionId: string;
+
+            if (existingSession) {
+              workflowSessionId = existingSession.id;
+              console.log('Using existing workflow session:', workflowSessionId);
+            } else {
+              // Create new workflow session
+              const { data: newSession, error: sessionError } = await supabase
+                .from('workflow_sessions')
+                .insert({
+                  document_id: realDocumentId,
+                  user_id: user.id,
+                  step: 'A',
+                  is_draft: true,
+                  completed_steps: [],
+                  updated_at: new Date().toISOString()
+                })
+                .select('id')
+                .single();
+
+              if (sessionError) throw sessionError;
+              workflowSessionId = newSession.id;
+              console.log('Created new workflow session:', workflowSessionId);
+            }
+
+            // Transform frontend tag format to normalized database format
+            const transformedTags = transformTagsToNormalized(selectedTags);
+            console.log('Transformed tags for normalized structure:', transformedTags);
+
+            // Transform custom tags to normalized format (if any)
+            const transformedCustomTags = (customTags || []).map((tag: any) => ({
+              dimensionId: tag.dimensionId,
+              name: tag.name,
+              description: tag.description || ''
+            }));
+
+            // Call the new workflow service to complete workflow with normalized structure
+            // This will:
+            // 1. Insert into document_categories
+            // 2. Create custom tags in custom_tags table
+            // 3. Insert into document_tags (both standard and custom)
+            // 4. Update workflow_sessions to complete
+            // 5. Update documents status
+            const result = await workflowService.completeWorkflow({
+              workflowSessionId: workflowSessionId,
+              documentId: realDocumentId,
+              userId: user.id,
+              categoryId: realCategoryId,
+              belongingRating: belongingRating,
+              tags: transformedTags,
+              customTags: transformedCustomTags
+            });
+
+            console.log('Workflow completed successfully with normalized structure:', result.id);
+
+            return NextResponse.json({
+              message: 'Workflow submitted successfully',
+              workflowId: result.id,
+              submittedAt: new Date().toISOString(),
+              success: true
+            });
+
+          } catch (error) {
+            console.error('Error completing workflow with normalized structure:', error);
+            console.error('Error details:', {
+              message: error instanceof Error ? error.message : 'Unknown error',
+              stack: error instanceof Error ? error.stack : undefined
+            });
+            
+            return NextResponse.json(
+              { 
+                error: 'Failed to submit workflow', 
+                success: false,
+                details: error instanceof Error ? error.message : 'Unknown error'
+              },
+              { status: 500 }
+            );
+          }
+
+        } else {
+          // ===== LEGACY JSONB METHOD (Backward Compatibility) =====
+          // Stores all data in workflow_sessions JSONB columns
+          
+          console.log('Using legacy JSONB storage method');
+          
+          const { data: submitData, error: submitError } = await supabase
+            .from('workflow_sessions')
+            .insert({
+              document_id: realDocumentId,
+              user_id: user.id,
+              step: 'complete',
+              belonging_rating: belongingRating,
+              selected_category_id: realCategoryId,
+              selected_tags: selectedTags,
+              custom_tags: customTags || [],
+              is_draft: false,
+              completed_steps: ['A', 'B', 'C'],
+              completed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single()
+
+          if (submitError) {
+            console.error('Submit error:', submitError)
+            return NextResponse.json(
+              { error: 'Failed to submit workflow', success: false },
+              { status: 500 }
+            )
+          }
+
+          return NextResponse.json({
+            message: 'Workflow submitted successfully',
+            workflowId: submitData.id,
+            submittedAt: new Date().toISOString(),
+            success: true
           })
-          .select()
-          .single()
-
-        if (submitError) {
-          console.error('Submit error:', submitError)
-          return NextResponse.json(
-            { error: 'Failed to submit workflow', success: false },
-            { status: 500 }
-          )
         }
-
-        return NextResponse.json({
-          message: 'Workflow submitted successfully',
-          workflowId: submitData.id,
-          submittedAt: new Date().toISOString(),
-          success: true
-        })
 
       case 'validate':
         // Validate workflow step

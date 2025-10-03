@@ -1641,3 +1641,389 @@ After successful implementation, update these documents:
 
 For questions or clarifications, contact the development team lead.
 
+------------------------------
+## Notes
+
+### Analysis: Will Prompt 2 Meet Requirements? (October 3, 2025)
+
+**Requirements to Validate:**
+1. ✅ Writes ALL form input values into a normalized Supabase table
+2. ❌ Displays those values from the database on the webpage as currently designed in \src
+
+---
+
+#### FUNCTIONAL UNDERSTANDING OF CURRENT CODEBASE
+
+The current system implements a 3-step document categorization workflow:
+
+**Step A: Statement of Belonging**
+- User provides a relationship rating (1-5 integer scale)
+- Stored in `belongingRating` state variable
+- Labels: 1="No relationship" → 5="Perfect fit"
+
+**Step B: Primary Category Selection**  
+- User selects one category from 10 available options
+- Categories include: "Complete Systems & Methodologies", "Proprietary Strategies & Approaches", etc.
+- Stored as `selectedCategory` object with full category details
+- High-value categories are flagged for priority processing
+
+**Step C: Secondary Tags & Metadata**
+- User selects tags across 7 dimensions:
+  - `authorship` (required)
+  - `format`
+  - `disclosure-risk` (required)
+  - `intended-use` (required)
+  - `evidence-type`
+  - `audience-level`
+  - `gating-level`
+- Stored as `selectedTags: Record<string, string[]>` (dimension key → array of tag IDs)
+- User can create custom tags with name and description
+- Stored as `customTags: Tag[]` array
+
+**Current Data Flow:**
+1. User interacts with UI components (StepA, StepB, StepC)
+2. Data stored in Zustand workflow store (`workflow-store.ts`)
+3. Auto-save writes drafts to `workflow_sessions` table (JSONB format)
+4. On final submit, API route (`/api/workflow`) writes complete data to:
+   - `workflow_sessions.selected_tags` (JSONB) ← DENORMALIZED
+   - `workflow_sessions.custom_tags` (JSONB) ← DENORMALIZED
+   - `workflow_sessions.belonging_rating` (INTEGER)
+   - `workflow_sessions.selected_category_id` (UUID) ← Already normalized
+5. Workflow completion page shows data from **in-memory Zustand store** (NOT from database)
+
+---
+
+#### WHAT PROMPT 1 ACCOMPLISHED (Already Executed Successfully)
+
+**Created Database Service Layer:**
+
+1. **`documentCategoryService`** (lines 419-494 in database.ts)
+   - `assignCategory()` - Inserts into `document_categories` table
+   - `updateCategory()` - Updates existing category assignment
+   - `getDocumentCategory()` - Retrieves category with JOIN to categories table
+
+2. **`documentTagService`** (lines 496-598 in database.ts)
+   - `assignTags()` - Batch inserts multiple tags into `document_tags` table
+   - `replaceTags()` - Deletes existing and inserts new tags
+   - `getDocumentTags()` - Retrieves all tags with JOINs, grouped by dimension
+   - `removeTags()` - Removes specific tags
+
+3. **`customTagService`** (lines 600-665 in database.ts)
+   - `createCustomTag()` - Inserts into `custom_tags` table as first-class entity
+   - `getCustomTags()` - Retrieves with optional filters
+   - `incrementUsage()` - Calls database RPC function
+
+4. **Updated `workflowService`** (lines 186-303 in database.ts)
+   - `completeWorkflow()` - Orchestrates complete normalized write:
+     - Assigns category to `document_categories`
+     - Creates custom tags in `custom_tags`
+     - Assigns all tags to `document_tags`
+     - Updates workflow session to complete
+     - Updates document status
+   - `getWorkflowWithRelations()` - Retrieves complete workflow with all relations
+
+5. **TypeScript Type Definitions** (lines 202-312 in supabase.ts)
+   - Added `document_categories` table types
+   - Added `document_tags` table types
+   - Added `custom_tags` table types
+
+---
+
+#### WHAT PROMPT 2 WILL DO
+
+**File 1: `src/app/api/workflow/route.ts`**
+
+**Changes to `case 'submit':` block (lines 206-247):**
+
+1. **Add dimension key mapping constant:**
+   ```typescript
+   const dimensionKeyMap: Record<string, string> = {
+     'authorship': '550e8400-e29b-41d4-a716-446655440003',
+     'format': '550e8400-e29b-41d4-a716-446655440004',
+     'disclosure-risk': '550e8400-e29b-41d4-a716-446655440005',
+     'intended-use': '550e8400-e29b-41d4-a716-446655440006',
+     'evidence-type': '550e8400-e29b-41d4-a716-446655440021',
+     'audience-level': '550e8400-e29b-41d4-a716-446655440022',
+     'gating-level': '550e8400-e29b-41d4-a716-446655440023'
+   }
+   ```
+
+2. **Add transformation helper function:**
+   ```typescript
+   function transformTagsToNormalized(
+     selectedTags: Record<string, string[]>
+   ): Array<{ tagId: string; dimensionId: string }>
+   ```
+   - Converts frontend format: `{ 'authorship': ['uuid1'] }` 
+   - To normalized format: `[{ tagId: 'uuid1', dimensionId: 'dim-uuid' }]`
+
+3. **Replace current JSONB insert with:**
+   ```typescript
+   const result = await workflowService.completeWorkflow({
+     workflowSessionId: existingSessionId || newSessionId,
+     documentId: realDocumentId,
+     userId: user.id,
+     categoryId: realCategoryId,
+     belongingRating: belongingRating,
+     tags: transformedTags,
+     customTags: customTags || []
+   })
+   ```
+
+4. **Add feature flag for dual-write:**
+   - Check `NEXT_PUBLIC_USE_NORMALIZED_TAGS` environment variable
+   - If `false`, use old JSONB method (backward compatibility)
+   - If `true`, use new normalized method
+   - Enables safe rollback
+
+**File 2: `src/stores/workflow-store.ts`**
+
+**Add helper methods to WorkflowState interface:**
+
+1. **`getTagsForSubmission()`** - Transform store format to API format
+   - Reads `selectedTags` from store
+   - Converts dimension keys to UUIDs
+   - Returns array format for normalized tables
+
+2. **`loadTagsFromNormalized()`** - Transform database format to store format
+   - Receives normalized tag data from database
+   - Converts dimension UUIDs back to keys
+   - Updates store with grouped format
+
+3. **Add `dimensionKeyMap` constant** - Same mapping as API route
+
+---
+
+#### CRITICAL ANALYSIS: WHAT PROMPT 2 WILL NOT DO
+
+**❌ MAJOR GAP: Display/Read Functionality Not Implemented**
+
+The specification **DOES NOT** update the display layer to read from the normalized tables. Specifically:
+
+**Current Display Implementation:**
+
+1. **`WorkflowCompleteServer.tsx` (lines 1-44):**
+   ```typescript
+   async function getDocument(documentId: string) {
+     const document = mockDocuments.find(doc => doc.id === documentId)
+     return document
+   }
+   
+   async function getWorkflowSummary(documentId: string) {
+     return {
+       workflowId: `workflow_${documentId}_${Date.now()}`,
+       submittedAt: new Date().toISOString(),
+       processingEstimate: '5-10 minutes',
+       status: 'completed'
+     }
+   }
+   ```
+   - **Uses MOCK DATA** - not real database queries
+   - Does NOT call `workflowService.getWorkflowWithRelations()`
+   - Does NOT fetch from normalized tables
+
+2. **`WorkflowCompleteClient.tsx` (lines 34-397):**
+   ```typescript
+   const { 
+     belongingRating,
+     selectedCategory,
+     selectedTags,
+     resetWorkflow,
+     submitWorkflow
+   } = useWorkflowStore()
+   ```
+   - Reads from **in-memory Zustand store**
+   - NOT from database
+   - Shows what was just entered, not what was saved
+
+**Missing Functionality for Full Requirements:**
+
+To display values from the normalized database, you would need:
+
+1. **Server Component Update:**
+   ```typescript
+   // NOT IN PROMPT 2
+   async function getWorkflowData(documentId: string, userId: string) {
+     const session = await workflowService.getSession(documentId, userId)
+     const data = await workflowService.getWorkflowWithRelations(session.id)
+     return data
+   }
+   ```
+
+2. **Data Transformation for Display:**
+   ```typescript
+   // NOT IN PROMPT 2
+   // Convert normalized tags back to frontend format
+   const displayTags = transformNormalizedToDisplay(data.tags)
+   ```
+
+3. **Update Client Component to Receive Database Data:**
+   ```typescript
+   // NOT IN PROMPT 2
+   <WorkflowCompleteClient 
+     workflowData={databaseWorkflowData}  // From normalized tables
+     document={document}
+     tagDimensions={tagDimensions}
+   />
+   ```
+
+---
+
+#### VERIFICATION AGAINST REQUIREMENTS
+
+**Requirement 1: ✅ Writes ALL form input values into a normalized Supabase table**
+
+**CONFIRMED - Prompt 2 WILL accomplish this:**
+
+After Prompt 2 execution, the submit action will write:
+
+| Form Input | Normalized Table | Field | Notes |
+|------------|------------------|-------|-------|
+| Belonging Rating | `document_categories` | `belonging_rating` | ✅ INTEGER (1-5) |
+| Selected Category | `document_categories` | `category_id` | ✅ UUID foreign key |
+| Standard Tags (43+) | `document_tags` | `tag_id`, `dimension_id` | ✅ Multiple rows, one per tag |
+| Custom Tags | `custom_tags` | `name`, `description`, `dimension_id` | ✅ First-class entities |
+| Custom Tag Assignments | `document_tags` | `tag_id` (custom), `dimension_id`, `is_custom_tag=true` | ✅ Linked via document_tags |
+| Workflow Session Link | All 3 tables | `workflow_session_id` | ✅ Maintains traceability |
+| User Assignment | All 3 tables | `assigned_by` / `created_by` | ✅ Audit trail |
+| Timestamps | All 3 tables | `assigned_at` / `created_at` | ✅ Temporal tracking |
+
+**How it works:**
+1. User submits form with all data
+2. API route calls `transformTagsToNormalized()` to convert format
+3. `workflowService.completeWorkflow()` executes 6 steps:
+   - Insert into `document_categories` (belonging rating + category)
+   - Create any custom tags in `custom_tags` table
+   - Insert all tags (standard + custom) into `document_tags`
+   - Update `workflow_sessions` to mark complete
+   - Update `documents` status to completed
+4. All form inputs are now in normalized tables with proper foreign keys
+
+**Requirement 2: ❌ Displays those values from the database on the webpage**
+
+**NOT ACCOMPLISHED - Prompt 2 does NOT address display:**
+
+Current display behavior after Prompt 2:
+- ❌ Workflow completion page still uses Zustand store (in-memory)
+- ❌ Server components still use mock data
+- ❌ No database queries to fetch normalized data
+- ❌ No transformation from normalized format back to display format
+- ❌ No refresh/reload capability to show saved data
+
+**What would be shown:**
+- Immediate after submit: Data from Zustand store (appears to work)
+- After page refresh: Mock data or error (database data not retrieved)
+- From another session: Cannot view submitted workflow data
+
+---
+
+#### RECOMMENDATIONS
+
+**To meet BOTH requirements, you need a Prompt 3:**
+
+**PROMPT 3 SCOPE: Display Layer Integration**
+
+**Files to modify:**
+1. `src/components/server/WorkflowCompleteServer.tsx`
+2. `src/components/client/WorkflowCompleteClient.tsx`
+3. Create: `src/app/api/workflow/session/route.ts` (GET endpoint)
+
+**Changes needed:**
+
+1. **Replace mock data with real queries:**
+   ```typescript
+   async function getWorkflowData(workflowSessionId: string) {
+     return await workflowService.getWorkflowWithRelations(workflowSessionId)
+   }
+   ```
+
+2. **Transform normalized data for display:**
+   ```typescript
+   function transformNormalizedToDisplay(tags: NormalizedTags) {
+     // Convert from: [{ tag_id, dimension_id }]
+     // To: { 'authorship': ['tag-id-1'], 'format': ['tag-id-2'] }
+   }
+   ```
+
+3. **Update client component to accept database props:**
+   ```typescript
+   interface Props {
+     workflowData: DatabaseWorkflowData  // NEW
+     document: WorkflowDocument
+     tagDimensions: TagDimension[]
+   }
+   ```
+
+4. **Add GET endpoint to fetch workflow by ID:**
+   ```typescript
+   GET /api/workflow/session?workflowId={id}
+   // Returns complete workflow with normalized data
+   ```
+
+**Estimated effort for Prompt 3:**
+- 2-3 hours implementation
+- 1-2 files modified
+- Low risk (read-only operations)
+
+---
+
+#### DEPLOYMENT CONSIDERATIONS
+
+**With Prompt 2 Only:**
+- ✅ Data is written to normalized tables correctly
+- ✅ Database integrity maintained
+- ✅ Reporting queries can access normalized data
+- ⚠️ Users see data from in-memory store immediately after submit
+- ❌ Users cannot view historical workflows
+- ❌ Refresh shows mock data, not real data
+- ❌ Multi-session workflows won't work
+
+**Recommended Deployment Path:**
+
+**Phase 2A: Prompt 2 (Write Layer) - CURRENT**
+- Deploy normalized writes
+- Keep feature flag `NEXT_PUBLIC_USE_NORMALIZED_TAGS=false` initially
+- Test dual-write for 1 week
+- Validate data in normalized tables
+
+**Phase 2B: Prompt 3 (Read Layer) - REQUIRED NEXT**
+- Implement display from normalized tables
+- Test with real workflow data
+- Enable feature flag: `NEXT_PUBLIC_USE_NORMALIZED_TAGS=true`
+- Full end-to-end validation
+
+**Phase 2C: Historical Migration (From Spec Step 1.4)**
+- Run migration script to backfill existing JSONB data
+- Validate historical data displays correctly
+- Remove old JSONB fields (after backup)
+
+---
+
+#### CONCLUSION
+
+**Prompt 2 Status: PARTIAL COMPLETION**
+
+| Requirement | Status | Completion % | Notes |
+|-------------|--------|--------------|-------|
+| Write ALL form inputs to normalized tables | ✅ YES | 100% | Fully implemented via `completeWorkflow()` |
+| Display values from database | ❌ NO | 0% | Not addressed in specification |
+| **Overall** | ⚠️ PARTIAL | **50%** | **Prompt 3 required for full requirements** |
+
+**Recommendation:** 
+- Proceed with Prompt 2 as specified
+- Immediately create Prompt 3 for display layer
+- Do NOT consider implementation complete until display works
+- Update specification to include Prompt 3 scope
+- Test end-to-end flow: Submit → Save → Refresh → Display from DB
+
+**Risk Assessment:**
+- **Low Risk:** Prompt 2 changes are backward compatible (feature flag)
+- **Medium Risk:** Users may be confused if they refresh and see mock data
+- **Mitigation:** Deploy Prompt 2 and Prompt 3 together in same release
+
+---
+
+**Analysis performed by:** Claude Sonnet 4.5  
+**Date:** October 3, 2025  
+**Codebase Version:** Post Prompt 1 execution  
+**Specification Version:** v1.0
