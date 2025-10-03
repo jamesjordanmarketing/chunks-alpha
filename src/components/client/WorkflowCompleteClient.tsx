@@ -80,10 +80,12 @@ export function WorkflowCompleteClient({ document, tagDimensions, workflowSummar
   }, [workflowData, workflowStore.selectedTags])
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [showProcessingDetails, setShowProcessingDetails] = useState(false)
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
+    setSubmitError(null) // Clear any previous errors
     try {
       const workflowId = await workflowStore.submitWorkflow()
       setIsSubmitting(false)
@@ -99,6 +101,8 @@ export function WorkflowCompleteClient({ document, tagDimensions, workflowSummar
       }
     } catch (error) {
       console.error('Submit error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+      setSubmitError(errorMessage)
       setIsSubmitting(false)
     }
   }
@@ -374,6 +378,16 @@ export function WorkflowCompleteClient({ document, tagDimensions, workflowSummar
             </div>
           </div>
         </Card>
+      )}
+
+      {/* Error Display */}
+      {submitError && (
+        <Alert variant="destructive" className="max-w-4xl mx-auto mb-6">
+          <AlertDescription>
+            <div className="font-semibold mb-2">Submission Error:</div>
+            <code className="text-xs whitespace-pre-wrap break-words">{submitError}</code>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Actions */}

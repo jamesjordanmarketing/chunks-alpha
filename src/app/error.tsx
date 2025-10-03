@@ -31,11 +31,15 @@ export default function Error({
             </p>
           </div>
 
-          {process.env.NODE_ENV === 'development' && (
-            <div className="text-left bg-muted p-4 rounded text-xs">
-              <code>{error.message}</code>
-            </div>
-          )}
+          <div className="text-left bg-muted p-4 rounded text-xs overflow-auto max-h-40">
+            <div className="font-semibold mb-2">Error Details:</div>
+            <code className="whitespace-pre-wrap break-words">{error.message}</code>
+            {error.digest && (
+              <div className="mt-2 text-xs text-muted-foreground">
+                Error ID: {error.digest}
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-2 justify-center">
             <Button onClick={reset} className="flex items-center gap-2">
