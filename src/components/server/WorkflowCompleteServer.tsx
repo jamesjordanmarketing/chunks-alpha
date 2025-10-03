@@ -8,11 +8,34 @@ interface Props {
 }
 
 /**
+ * Convert mock document IDs to real UUIDs
+ * This matches the conversion in the API route
+ */
+function convertMockDocumentId(documentId: string): string {
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  
+  // If already a valid UUID, return as-is
+  if (documentId.match(UUID_REGEX)) {
+    return documentId
+  }
+  
+  // Map mock IDs to real UUIDs
+  const mockIdMap: Record<string, string> = {
+    'doc-1': '550e8400-e29b-41d4-a716-446655440012',
+    'doc-2': '550e8400-e29b-41d4-a716-446655440024',
+    'doc-3': '550e8400-e29b-41d4-a716-446655440025'
+  }
+  
+  return mockIdMap[documentId] || documentId
+}
+
+/**
  * Fetch document from database
  */
 async function getDocument(documentId: string) {
   try {
-    const document = await documentService.getById(documentId)
+    const realDocumentId = convertMockDocumentId(documentId)
+    const document = await documentService.getById(realDocumentId)
     return document
   } catch (error) {
     console.error('Error fetching document:', error)

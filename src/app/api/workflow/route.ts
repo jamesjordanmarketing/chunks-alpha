@@ -70,8 +70,14 @@ export async function POST(request: NextRequest) {
     
     // Document ID conversion
     let realDocumentId = documentId
-    if (documentId === 'doc-1' || !documentId.match(UUID_REGEX)) {
-      realDocumentId = '550e8400-e29b-41d4-a716-446655440012' // "Complete Customer Onboarding System Blueprint"
+    if (!documentId.match(UUID_REGEX)) {
+      // Map mock IDs to real UUIDs
+      const mockIdMap: Record<string, string> = {
+        'doc-1': '550e8400-e29b-41d4-a716-446655440012',
+        'doc-2': '550e8400-e29b-41d4-a716-446655440024',
+        'doc-3': '550e8400-e29b-41d4-a716-446655440025'
+      }
+      realDocumentId = mockIdMap[documentId] || '550e8400-e29b-41d4-a716-446655440012'
       console.log('Converting mock document ID to real UUID:', documentId, '->', realDocumentId)
     }
     
