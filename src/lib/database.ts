@@ -197,6 +197,18 @@ export const workflowService = {
     customTags?: Array<{ dimensionId: string; name: string; description?: string }>;
   }) {
     try {
+      // Step 0: Clean up any existing normalized data for this document
+      // This allows resubmission without duplicate key errors
+      await supabase
+        .from('document_categories')
+        .delete()
+        .eq('document_id', params.documentId);
+      
+      await supabase
+        .from('document_tags')
+        .delete()
+        .eq('document_id', params.documentId);
+      
       // Step 1: Assign category
       await documentCategoryService.assignCategory({
         documentId: params.documentId,
