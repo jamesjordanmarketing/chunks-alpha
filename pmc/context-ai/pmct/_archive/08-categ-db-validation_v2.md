@@ -615,6 +615,7 @@ The test results file is the **official record** of validation and will be used 
 
 **Purpose:** Display complete results of the latest Category Module submission  
 **Date Added:** October 3, 2025  
+**Date Updated:** October 3, 2025 (v2 - Fixed column errors)  
 **Usage:** Copy and paste into Supabase SQL Editor to verify workflow submission data
 
 This query displays the most recent completed workflow submission across 3 organized output tables:
@@ -622,9 +623,15 @@ This query displays the most recent completed workflow submission across 3 organ
 - **Table 2:** Panel A (Belonging Rating) & Panel B (Primary Category)
 - **Table 3:** Panel C (All Tags by Dimension)
 
+### Fixes in v2:
+- ✅ Removed non-existent `slug` column from `categories` table (line 709 error)
+- ✅ Removed non-existent `slug` columns from `tags` and `custom_tags` tables (line 746 error)
+- ✅ Replaced slug references with description fields where appropriate
+- ✅ Improved output formatting for better readability
+
 ```sql
 -- ============================================================================
--- CATEGORY MODULE - LATEST SUBMISSION VERIFICATION QUERY
+-- CATEGORY MODULE - LATEST SUBMISSION VERIFICATION QUERY v2
 -- Displays complete results from the most recent workflow submission
 -- Shows all data from Panels A, B, and C in organized output tables
 -- ============================================================================
@@ -706,7 +713,7 @@ SELECT
   '=== PANEL B: PRIMARY CATEGORY ==='::text,
   lw.document_title,
   'Category: ' || c.name,
-  'Slug: ' || c.slug,
+  'Description: ' || COALESCE(SUBSTRING(c.description, 1, 100), 'N/A'),
   'ID: ' || c.id::text
 FROM latest_workflow lw
 JOIN public.document_categories dc ON dc.workflow_session_id = lw.workflow_id AND dc.is_primary = true
@@ -737,13 +744,17 @@ WITH latest_workflow AS (
 
 SELECT 
   '=== PANEL C: TAGS & METADATA ==='::text AS section,
-  td.name || ' (' || td.key || ')'        AS dimension,
+  td.name || ' (Sort: ' || td.sort_order::text || ')'  AS dimension,
   COALESCE(t.name, ct.name, '(unknown)')  AS tag_name,
   CASE 
     WHEN dt.is_custom_tag THEN '🏷️ CUSTOM TAG'
     ELSE '📌 STANDARD TAG'
   END AS tag_type,
-  COALESCE(t.slug, ct.slug, 'N/A')        AS tag_slug,
+  COALESCE(
+    SUBSTRING(t.description, 1, 50),
+    SUBSTRING(ct.description, 1, 50),
+    'N/A'
+  ) AS tag_description,
   COALESCE(t.id::text, ct.id::text, 'N/A') AS tag_id
 FROM latest_workflow lw
 JOIN public.document_tags dt ON dt.workflow_session_id = lw.workflow_id
@@ -776,9 +787,9 @@ WHERE NOT EXISTS (SELECT 1 FROM latest_workflow)
     JOIN public.document_tags dt ON dt.workflow_session_id = lw.workflow_id
   )
 
-ORDER BY section DESC, dimension, tag_name;
 
--- ============================================================================
+-- 
+ORDER BY section DESC, dimension, tag_name;============================================================================
 -- QUERY COMPLETE
 -- ============================================================================
 -- EXPECTED OUTPUT:
@@ -794,8 +805,9 @@ ORDER BY section DESC, dimension, tag_name;
 ✅ **Organized Output:** Three distinct result tables for easy reading  
 ✅ **Handles Empty State:** Shows informative message if no completed workflows exist  
 ✅ **Visual Indicators:** Uses emoji markers for tag types and belonging assessment  
-✅ **Detailed Metadata:** Includes IDs, slugs, and timestamps for debugging  
-✅ **Tag Summary:** Provides count breakdown of standard vs custom tags
+✅ **Detailed Metadata:** Includes IDs, descriptions, and timestamps for debugging  
+✅ **Tag Summary:** Provides count breakdown of standard vs custom tags  
+✅ **Fixed Errors:** Removed non-existent slug columns that caused SQL errors
 
 ### How to Use
 
@@ -814,11 +826,30 @@ ORDER BY section DESC, dimension, tag_name;
 
 **Table 2 - Panels A & B:**
 - Panel A: Belonging rating with assessment
-- Panel B: Primary category selection with details
+- Panel B: Primary category selection with details (name, description, ID)
 
 **Table 3 - Panel C:**
 - All assigned tags organized by dimension
 - Tag type indicators (standard vs custom)
-- Tag slugs and IDs
+- Tag descriptions and IDs
 - Summary statistics
+
+### Changes from v1:
+
+1. **Line 709 Fix:** Changed `'Slug: ' || c.slug` to `'Description: ' || COALESCE(SUBSTRING(c.description, 1, 100), 'N/A')` - The `slug` column doesn't exist in the `categories` table
+
+2. **Line 746 Fix:** Changed `COALESCE(t.slug, ct.slug, 'N/A')` to `COALESCE(SUBSTRING(t.description, 1, 50), SUBSTRING(ct.description, 1, 50), 'N/A')` - The `slug` column doesn't exist in `tags` or `custom_tags` tables
+
+3. **Improved Display:** Added description excerpts (first 50-100 chars) for better context instead of non-existent slug values
+
+### Database Schema Reference:
+
+**categories table columns:**
+- id, name, description, examples, is_high_value, impact_description, sort_order, created_at, updated_at
+
+**tags table columns:**
+- id, dimension_id, name, description, icon, risk_level, sort_order, created_at, updated_at
+
+**custom_tags table columns:**
+- id, dimension_id, name, description, created_by, organization_id, usage_count, created_at, updated_at, is_approved
 
