@@ -105,7 +105,10 @@ G. Build the api calls necessary to extract "first pass" chunk dimension values 
 
 H. All chunk, metadata, referential data, factual data, tags, labels, and generated dimensions content should be saved to well structured, normalized, human readable named and organized Supabase tables.
 
-I. After all the default chunks have been tagged and labelled they must be displayed on a "[NAME_OF_DOCUMENT] - Chunk Dashboard" that is very much like this codebase: `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\chunks-alpha-dashboard\src`. You can use this exact code and pull any or all code that you need into `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src`. Under "things we know" list just three AI generated dimensions for its accuracy confidence level). Under "things we don't know" list just three generated dimensions that we did not generate or that have an accuracy confidence level of less than 75%
+I. After all the default chunks have been tagged and labelled they must be displayed on a "[NAME_OF_DOCUMENT] - Chunk Dashboard" that is very much like this codebase: `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\chunks-alpha-dashboard\src`. You can use this exact UI and update it to match our required functionality. Remember it is a VITE application so cannot be used as is. It is better to use it to understand the look and behavior of the chunks panels.
+
+
+`C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src`. Under "things we know" list just three AI generated dimensions for its accuracy confidence level). Under "things we don't know" list just three generated dimensions that we did not generate or that have an accuracy confidence level of less than 75%
 Clicking on one of them will take you to the spreadsheet page of all the associated data for that chunk.
 
 J. The results page for each associated data for the final outputs of a chunk run shall:

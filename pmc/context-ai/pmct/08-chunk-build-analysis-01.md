@@ -60,6 +60,9 @@ This analysis examines the requirements for building a comprehensive chunk dimen
 **A1.1:** The chunk extraction and dimension data should be stored in the same Supabase database (Bright Run V.2). 
 
 **Q1.2:** The document metadata dictionary CSV has 60+ fields. Should ALL of these become columns in the chunk dimension table, or should we focus on a subset for the MVP? If a subset, which are the highest priority?
+We have answered this question in other documents in this context.
+The short answer is yes they should all become columns and we will display them all on the web page table.  
+You will see in the other document and the new data dictionary segments that we will have well organized types and efficient prompt discovery.
 
 **Q1.3:** How should we handle the relationship between document-level categorization (already stored) and chunk-level dimensions? Should chunks inherit certain values from their parent document?
 **A1.3:** We don't need the document-level belonging, primary categories, and tags to be explicitly created as individual dimensions for the chunks, but chunks can always inherit those values because the chunk will have reference to the main document, and those values can be referred to via that reference if needed.
