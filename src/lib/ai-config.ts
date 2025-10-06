@@ -8,6 +8,6 @@ export const AI_CONFIG = {
   };
   
   // Validate configuration on import
-  if (!AI_CONFIG.apiKey) {
-    console.warn('⚠️  ANTHROPIC_API_KEY not configured - add to .env.local');
+  if (!AI_CONFIG.apiKey && process.env.NODE_ENV !== 'development') {
+    console.warn('⚠️  ANTHROPIC_API_KEY not configured');
   }
