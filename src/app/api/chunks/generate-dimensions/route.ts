@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
     // Get server-side Supabase client
     const supabase = createServerSupabaseClient();
     
-    // Get current user (optional - will use system user if not authenticated)
+    // Get current user (optional - will use null if not authenticated)
     const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || 'system';
+    const userId = user?.id || null;
 
     // Generate dimensions
     const generator = new DimensionGenerator();

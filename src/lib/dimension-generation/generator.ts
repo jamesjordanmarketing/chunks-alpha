@@ -24,7 +24,7 @@ export class DimensionGenerator {
    */
   async generateDimensionsForDocument(params: {
     documentId: string;
-    userId: string;
+    userId: string | null;
     chunkIds?: string[];  // Optional: only regenerate specific chunks
     templateIds?: string[];  // Optional: only use specific templates
     aiParams?: {  // Optional: override AI parameters

@@ -16,7 +16,7 @@ export class ChunkExtractor {
   /**
    * Main extraction method - orchestrates the entire process
    */
-  async extractChunksForDocument(documentId: string, userId: string): Promise<Chunk[]> {
+  async extractChunksForDocument(documentId: string, userId: string | null): Promise<Chunk[]> {
     // Create extraction job
     const job = await chunkExtractionJobService.createJob(documentId, userId);
 

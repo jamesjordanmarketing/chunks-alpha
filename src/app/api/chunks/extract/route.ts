@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
     // Get server-side Supabase client
     const supabase = createServerSupabaseClient();
     
-    // Get current user (optional - will use system user if not authenticated)
+    // Get current user (optional - will use null if not authenticated)
     const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || 'system';
+    const userId = user?.id || null;
 
     // Start extraction
     const extractor = new ChunkExtractor();
@@ -75,21 +75,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Chunk extraction error:', error);
-    
-    // Try to update job status to failed
-    try {
-      const { documentId } = await request.json();
-      const job = await chunkExtractionJobService.getLatestJob(documentId);
-      if (job) {
-        await chunkExtractionJobService.updateJob(job.id, {
-          status: 'failed',
-          error_message: error.message,
-          completed_at: new Date().toISOString(),
-        });
-      }
-    } catch (updateError) {
-      console.error('Failed to update job status:', updateError);
-    }
     
     return NextResponse.json(
       { error: error.message || 'Extraction failed' },

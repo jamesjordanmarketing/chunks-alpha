@@ -198,7 +198,7 @@ export const promptTemplateService = {
 
 export const chunkExtractionJobService = {
   // Create extraction job
-  async createJob(documentId: string, userId: string): Promise<ChunkExtractionJob> {
+  async createJob(documentId: string, userId: string | null): Promise<ChunkExtractionJob> {
     const { data, error } = await supabase
       .from('chunk_extraction_jobs')
       .insert({
