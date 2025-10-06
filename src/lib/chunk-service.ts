@@ -57,6 +57,18 @@ export const chunkService = {
       .eq('document_id', documentId);
     
     if (error) throw error;
+  },
+
+  // Get document metadata by ID (for dimension generation)
+  async getDocumentById(documentId: string): Promise<any | null> {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
   }
 };
 

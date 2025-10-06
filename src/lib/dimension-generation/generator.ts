@@ -68,6 +68,17 @@ export class DimensionGenerator {
 
       // Get document metadata for inheritance
       const docCategory = await documentCategoryService.getDocumentCategory(documentId);
+      
+      // Get full document details for previously generated dimensions
+      const document = await chunkService.getDocumentById(documentId);
+      const documentMetadata = {
+        title: document?.title || 'Untitled Document',
+        author: document?.authorId || null,  // TODO: Map authorId to human-readable name
+        sourceType: document?.source_type || null,
+        sourceUrl: document?.source_url || null,
+        docDate: document?.doc_date || document?.createdAt || null,
+        docVersion: document?.doc_version || null,
+      };
 
       // Process chunks in batches of 3 for efficiency
       const batchSize = 3;
@@ -81,6 +92,7 @@ export class DimensionGenerator {
               chunk,
               runId: run.run_id,
               documentCategory: docCategory?.categories?.name || 'Unknown',
+              documentMetadata,  // Pass document metadata
               templateIds,  // Pass template filter
               aiParams,  // Pass AI params override
             }).then(cost => {
@@ -120,13 +132,21 @@ export class DimensionGenerator {
     chunk: Chunk;
     runId: string;
     documentCategory: string;
+    documentMetadata: {
+      title: string;
+      author: string | null;
+      sourceType: string | null;
+      sourceUrl: string | null;
+      docDate: string | null;
+      docVersion: string | null;
+    };
     templateIds?: string[];  // Optional: filter to specific templates
     aiParams?: {
       temperature?: number;
       model?: string;
     };
   }): Promise<number> {  // Returns cost
-    const { chunk, runId, documentCategory, templateIds, aiParams } = params;
+    const { chunk, runId, documentCategory, documentMetadata, templateIds, aiParams } = params;
 
     const startTime = Date.now();
     let totalCost = 0;
@@ -136,9 +156,14 @@ export class DimensionGenerator {
       chunk_id: chunk.id,
       run_id: runId,
       
-      // Inherited from document/chunk
+      // Previously generated dimensions (inherited from document)
       doc_id: chunk.document_id,
-      doc_title: null,  // TODO: Get from document
+      doc_title: documentMetadata.title,
+      doc_version: documentMetadata.docVersion,
+      source_type: documentMetadata.sourceType,
+      source_url: documentMetadata.sourceUrl,
+      author: documentMetadata.author,
+      doc_date: documentMetadata.docDate,
       primary_category: documentCategory,
       
       // Initialize defaults
