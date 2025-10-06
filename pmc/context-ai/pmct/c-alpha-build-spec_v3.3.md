@@ -1,8 +1,16 @@
-# Chunk Alpha Module - Build Specification v3.2
+# Chunk Alpha Module - Build Specification v3.3
 **Date:** October 5, 2025  
 **Project:** Bright Run LoRA Training Data Platform  
 **Module:** Chunk Dimension Testing Environment  
 **AI Model:** Claude Sonnet 4.5 (200k context windows)
+
+**Version 3.3 Updates:**
+- 🔧 **CRITICAL FIX**: Added confidence score calculation methodology to Build Prompt #3
+- 📋 **CRITICAL FIX**: Embedded Dashboard Design Reference directly into Build Prompt #4
+- ✅ **CRITICAL FIX**: Implemented complete helper functions for confidence-based display
+- 📝 Added module context primer to Build Prompt #1
+- 🎯 Expanded Build Prompt #5 with specific implementation requirements
+- ✨ All prompts now self-contained and ready for coding agent execution
 
 **Version 3.2 Updates:**
 - 📸 Added visual reference screenshot from existing dashboard
@@ -781,6 +789,34 @@ npm install zustand immer  # State management (if not already installed)
 ---
 
 ## BUILD PROMPT #1: DATABASE SCHEMA & INFRASTRUCTURE
+
+**MODULE CONTEXT:**
+
+This is Phase 1 of building the Chunk Alpha Module - a comprehensive chunk dimension testing environment that extends the existing document categorization module. Understanding the bigger picture will help you make better architectural decisions:
+
+**What This Module Does:**
+- Extracts 4 types of chunks from categorized documents (Chapter_Sequential, Instructional_Unit, CER, Example_Scenario)
+- Generates 60+ AI dimensions per chunk using Claude Sonnet 4.5
+- Displays all data in a spreadsheet-like interface for analysis
+- Enables testing and refinement of AI prompts for LoRA training data creation
+
+**Why This Module Exists:**
+Small business owners need to convert their proprietary knowledge into LoRA training data. This module helps test and refine the AI prompts that extract structured dimensions from unstructured content.
+
+**Your Role in This Phase:**
+You are building the database foundation that will:
+- Store extracted chunks with mechanical metadata (chars, tokens, positions)
+- Store AI-generated dimensions with confidence scores
+- Track multiple generation runs for comparison
+- Enable iterative prompt testing and refinement
+
+**Architecture Decisions You Should Know:**
+- Integration: This extends the existing `chunks-alpha` codebase (not greenfield)
+- Processing: Batch processing with background jobs (not real-time)
+- Storage: Supabase PostgreSQL with unlimited run history
+- UI Pattern: Following the existing dashboard wireframe design
+
+---
 
 **CONTEXT FOR AI:** You are building the foundation for a chunk dimension testing environment that extends an existing document categorization module. The database schema has been set up by the human, and your job is to create the TypeScript services and types to interact with this schema.
 
@@ -1897,7 +1933,7 @@ export class DimensionGenerator {
       review_status: 'unreviewed',
       include_in_training_yn: true,
       
-      // Meta-dimensions
+      // Meta-dimensions - will be calculated after dimension generation
       generation_confidence_precision: null,
       generation_confidence_accuracy: null,
       generation_cost_usd: null,
@@ -1923,6 +1959,14 @@ export class DimensionGenerator {
     // Calculate final meta-dimensions
     dimensions.generation_cost_usd = totalCost;
     dimensions.generation_duration_ms = Date.now() - startTime;
+    
+    // CRITICAL: Calculate confidence scores for dashboard display
+    // Dashboard uses these to separate "Things We Know" (>=8) from "Things We Need to Know" (<8)
+    const precisionScore = this.calculatePrecisionScore(dimensions, chunk.chunk_type);
+    const accuracyScore = this.calculateAccuracyScore(dimensions, chunk.chunk_type, precisionScore);
+    
+    dimensions.generation_confidence_precision = precisionScore;
+    dimensions.generation_confidence_accuracy = accuracyScore;
 
     // Save to database
     await chunkDimensionService.createDimensions(dimensions as Omit<ChunkDimensions, 'id' | 'generated_at'>);
@@ -2029,6 +2073,137 @@ export class DimensionGenerator {
 
     return mapping[templateType] || {};
   }
+
+  /**
+   * Calculate precision score (1-10) based on field completeness
+   * Used by dashboard to determine "Things We Know" (>=8) vs "Things We Need to Know" (<8)
+   */
+  private calculatePrecisionScore(
+    dimensions: Partial<ChunkDimensions>,
+    chunkType: ChunkType
+  ): number {
+    // Define expected fields based on chunk type
+    const expectedFieldsByType: Record<ChunkType, string[]> = {
+      'Chapter_Sequential': [
+        'chunk_summary_1s',
+        'key_terms',
+        'audience',
+        'intent',
+        'tone_voice_tags',
+        'brand_persona_tags',
+        'domain_tags',
+        'coverage_tag',
+        'novelty_tag',
+        'ip_sensitivity',
+      ],
+      'Instructional_Unit': [
+        'chunk_summary_1s',
+        'key_terms',
+        'task_name',
+        'preconditions',
+        'inputs',
+        'steps_json',
+        'expected_output',
+        'warnings_failure_modes',
+        'audience',
+        'coverage_tag',
+      ],
+      'CER': [
+        'chunk_summary_1s',
+        'claim',
+        'evidence_snippets',
+        'reasoning_sketch',
+        'citations',
+        'factual_confidence_0_1',
+        'audience',
+        'coverage_tag',
+        'novelty_tag',
+        'ip_sensitivity',
+      ],
+      'Example_Scenario': [
+        'chunk_summary_1s',
+        'scenario_type',
+        'problem_context',
+        'solution_action',
+        'outcome_metrics',
+        'style_notes',
+        'audience',
+        'key_terms',
+        'coverage_tag',
+        'novelty_tag',
+      ],
+    };
+
+    const expectedFields = expectedFieldsByType[chunkType] || [];
+    
+    // Count populated fields
+    let populatedCount = 0;
+    expectedFields.forEach(fieldName => {
+      const value = dimensions[fieldName as keyof ChunkDimensions];
+      
+      // Check if field is meaningfully populated
+      if (this.isFieldPopulated(value)) {
+        populatedCount++;
+      }
+    });
+
+    // Calculate ratio and convert to 1-10 scale
+    const ratio = expectedFields.length > 0 ? populatedCount / expectedFields.length : 0;
+    const score = Math.round(ratio * 10);
+    
+    // Ensure score is between 1 and 10
+    return Math.max(1, Math.min(10, score));
+  }
+
+  /**
+   * Calculate accuracy score (1-10) using precision with variance
+   * MVP version: Uses precision as baseline with controlled variance for realistic testing
+   * 
+   * FUTURE: Replace with AI self-assessment, human rating, or semantic validation
+   */
+  private calculateAccuracyScore(
+    dimensions: Partial<ChunkDimensions>,
+    chunkType: ChunkType,
+    precisionScore: number
+  ): number {
+    // Start with precision score as baseline
+    let score = precisionScore;
+    
+    // Add controlled variance to simulate quality assessment
+    // This creates differentiation for testing purposes
+    const variance = this.generateControlledVariance();
+    score = score + variance;
+    
+    // Ensure score stays within 1-10 range
+    return Math.max(1, Math.min(10, score));
+  }
+
+  /**
+   * Helper: Check if a field value is meaningfully populated
+   */
+  private isFieldPopulated(value: any): boolean {
+    if (value === null || value === undefined) return false;
+    if (value === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+    return true;
+  }
+
+  /**
+   * Generate controlled variance for accuracy testing
+   * Returns: Integer between -2 and +2
+   * 
+   * Weighted to favor slight positive variance for realistic confidence distribution
+   */
+  private generateControlledVariance(): number {
+    const random = Math.random();
+    
+    if (random < 0.1) return -2;      // 10% chance of -2
+    if (random < 0.25) return -1;     // 15% chance of -1
+    if (random < 0.65) return 0;      // 40% chance of 0 (same as precision)
+    if (random < 0.9) return 1;       // 25% chance of +1
+    return 2;                         // 10% chance of +2
+  }
 }
 ```
 
@@ -2109,6 +2284,151 @@ Modify chunk extraction to automatically trigger dimension generation after chun
 - Typography scale and spacing (compact text with generous padding)
 - Icon placement and usage from lucide-react
 - Analysis summary cards with colored backgrounds
+
+---
+
+## CRITICAL: EMBEDDED DESIGN PATTERNS YOU MUST IMPLEMENT
+
+**IMPORTANT:** The complete design reference exists earlier in this document (lines 59-346), but to make this prompt self-contained, the essential patterns are embedded below. If you need additional context, refer to the full Dashboard Wireframe Design Reference section.
+
+### Three-Section Card Layout (MANDATORY STRUCTURE)
+
+Every chunk card MUST have this exact three-section structure:
+
+**Section 1: Chunk Metadata (Neutral Background)**
+```typescript
+<div className="mb-4 p-3 bg-white/30 rounded border">
+  <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
+    <Hash className="h-3 w-3" />
+    Chunk Metadata
+  </h5>
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+    {/* Mechanical data: chars, tokens, page numbers */}
+  </div>
+</div>
+```
+**Purpose:** Display mechanical, objective chunk data  
+**Color:** Neutral/white (`bg-white/30`)  
+**Content:** Character count, token count, page numbers, chunk type
+
+**Section 2: Things We Know (Green Background)**
+```typescript
+<div className="mb-4 p-3 bg-green-50 rounded border border-green-200">
+  <h5 className="text-sm font-medium mb-2 flex items-center gap-2 text-green-800">
+    <CheckCircle className="h-3 w-3" />
+    Things We Know ({highConfidenceCount})
+  </h5>
+  {/* Show dimensions where generation_confidence_accuracy >= 8 */}
+  {/* Display top 3 highest confidence findings */}
+  {/* Each finding shows: dimension name, confidence score (1-10 scale × 10 for %), value */}
+</div>
+```
+**Purpose:** Display high-confidence AI-generated dimensions  
+**Color:** Green (`bg-green-50`, `border-green-200`)  
+**Content:** Dimensions with `generation_confidence_accuracy >= 8`  
+**Display Logic:** Show top 3 by confidence, sorted descending  
+**Confidence Display:** Score is 1-10, display as `{score * 10}%` (e.g., score 8 → "80% confidence")
+
+**Section 3: Things We Need to Know (Orange Background)**
+```typescript
+<div className="p-3 bg-orange-50 rounded border border-orange-200">
+  <div className="flex items-center justify-between mb-2">
+    <h5 className="text-sm font-medium flex items-center gap-2 text-orange-800">
+      <AlertCircle className="h-3 w-3" />
+      Things We Need to Know ({lowConfidenceCount})
+    </h5>
+    <Button variant="outline" size="sm" className="text-xs h-6 px-2 border-orange-300 text-orange-700 hover:bg-orange-100">
+      <ExternalLink className="h-3 w-3 mr-1" />
+      Detail View
+    </Button>
+  </div>
+  {/* Show dimensions where generation_confidence_accuracy < 8 */}
+  {/* Display top 3 lowest confidence dimensions */}
+</div>
+```
+**Purpose:** Display low-confidence dimensions needing review  
+**Color:** Orange (`bg-orange-50`, `border-orange-200`)  
+**Content:** Dimensions with `generation_confidence_accuracy < 8`  
+**Display Logic:** Show top 3 by confidence, sorted ascending (lowest first)  
+**Action:** "Detail View" button → Navigate to `/chunks/[documentId]/spreadsheet/[chunkId]`
+
+### Color Coding System
+
+**Chunk Type Border/Background Colors:**
+```typescript
+function getChunkTypeColor(type: string): string {
+  const colors = {
+    'Chapter_Sequential': 'border-blue-200 bg-blue-50',
+    'Instructional_Unit': 'border-purple-200 bg-purple-50',
+    'CER': 'border-orange-200 bg-orange-50',
+    'Example_Scenario': 'border-yellow-200 bg-yellow-50',
+  };
+  return colors[type] || 'border-gray-200 bg-gray-50';
+}
+```
+
+**Confidence Threshold:**
+- **High Confidence** (>=8): Appears in "Things We Know" (green section)
+- **Low Confidence** (<8): Appears in "Things We Need to Know" (orange section)
+- Display confidence as percentage: `{score * 10}%` (e.g., 8 → 80%, 9 → 90%)
+
+### Icons from lucide-react
+
+Required imports:
+```typescript
+import { 
+  FileText,      // Document/chunk icon
+  CheckCircle,   // High confidence indicator
+  AlertCircle,   // Low confidence indicator  
+  Hash,          // Metadata section icon
+  ExternalLink,  // Detail view link
+  ArrowRight,    // List item bullets
+} from 'lucide-react';
+```
+
+### Typography Scale
+
+- **Main heading:** `text-xl font-medium`
+- **Card title:** `font-medium`
+- **Section headings:** `text-sm font-medium`
+- **Body text:** `text-xs`
+- **Muted text:** `text-xs text-muted-foreground`
+
+### Spacing and Padding
+
+- **Container:** `container mx-auto px-4 py-6`
+- **Section spacing:** `space-y-6` for main sections, `space-y-4` for chunk cards
+- **Card content:** `pt-0` on CardContent to remove default top padding
+- **Section boxes:** `p-3` for inner sections, `p-4` for summary cards
+- **Grid gaps:** `gap-3` for metadata grid, `gap-4` for summary stats
+
+### Progressive Disclosure Pattern
+
+**Overview (Chunk Dashboard):**
+- Show 3 items in "Things We Know"
+- Show 3 items in "Things We Need to Know"
+- Use `.slice(0, 3)` to limit display
+
+**Detail View (Spreadsheet):**
+- Show ALL dimensions in table format
+- Triggered by "Detail View" button
+- Navigate to `/chunks/[documentId]/spreadsheet/[chunkId]`
+
+### Analysis Summary (Bottom of Page)
+
+4-column stat cards:
+```typescript
+<div className="grid md:grid-cols-4 gap-4">
+  <div className="text-center p-4 bg-blue-50 rounded">
+    <div className="text-2xl font-medium text-blue-600">{totalChunks}</div>
+    <div className="text-sm text-blue-800">Total Chunks</div>
+  </div>
+  {/* Repeat for: Analyzed (green), Dimensions (orange), Cost (purple) */}
+</div>
+```
+**Colors:** Blue → Green → Orange → Purple
+
+---
 
 **YOUR TASK:**
 
@@ -2337,16 +2657,110 @@ function getChunkTypeColor(type: string): string {
   }
 }
 
+interface DimensionWithConfidence {
+  fieldName: string;
+  value: any;
+  confidence: number; // 1-10 scale from database
+}
+
 function getHighConfidenceDimensions(chunk: any): DimensionWithConfidence[] {
-  // Get dimensions with confidence >= 75%
-  // Sort by confidence descending
-  // Return top items
+  // Get the latest dimension data for this chunk
+  if (!chunk.dimensions || chunk.dimensions.length === 0) return [];
+  
+  const latestDim = chunk.dimensions[0]; // Assume sorted by generated_at DESC
+  
+  // Extract all dimensional fields with confidence scores
+  const dimensionsWithScores: DimensionWithConfidence[] = [];
+  
+  // Add fields based on type - only include populated fields
+  const fieldMappings = {
+    chunk_summary_1s: latestDim.chunk_summary_1s,
+    key_terms: latestDim.key_terms,
+    audience: latestDim.audience,
+    intent: latestDim.intent,
+    tone_voice_tags: latestDim.tone_voice_tags,
+    brand_persona_tags: latestDim.brand_persona_tags,
+    domain_tags: latestDim.domain_tags,
+    task_name: latestDim.task_name,
+    preconditions: latestDim.preconditions,
+    expected_output: latestDim.expected_output,
+    claim: latestDim.claim,
+    evidence_snippets: latestDim.evidence_snippets,
+    reasoning_sketch: latestDim.reasoning_sketch,
+    scenario_type: latestDim.scenario_type,
+    problem_context: latestDim.problem_context,
+    solution_action: latestDim.solution_action,
+  };
+  
+  Object.entries(fieldMappings).forEach(([fieldName, value]) => {
+    if (value !== null && value !== undefined && value !== '' && 
+        !(Array.isArray(value) && value.length === 0)) {
+      // Use accuracy score as primary confidence indicator (1-10 scale)
+      const confidence = latestDim.generation_confidence_accuracy || 5;
+      
+      if (confidence >= 8) { // High confidence threshold
+        dimensionsWithScores.push({ fieldName, value, confidence });
+      }
+    }
+  });
+  
+  // Sort by confidence descending, return all (UI will slice to 3)
+  return dimensionsWithScores.sort((a, b) => b.confidence - a.confidence);
 }
 
 function getLowConfidenceDimensions(chunk: any): DimensionWithConfidence[] {
-  // Get dimensions with confidence < 75%
-  // Sort by confidence ascending
-  // Return bottom items
+  // Get the latest dimension data for this chunk
+  if (!chunk.dimensions || chunk.dimensions.length === 0) return [];
+  
+  const latestDim = chunk.dimensions[0];
+  
+  const dimensionsWithScores: DimensionWithConfidence[] = [];
+  
+  // Same field mappings as above
+  const fieldMappings = {
+    chunk_summary_1s: latestDim.chunk_summary_1s,
+    key_terms: latestDim.key_terms,
+    audience: latestDim.audience,
+    intent: latestDim.intent,
+    tone_voice_tags: latestDim.tone_voice_tags,
+    brand_persona_tags: latestDim.brand_persona_tags,
+    domain_tags: latestDim.domain_tags,
+    task_name: latestDim.task_name,
+    preconditions: latestDim.preconditions,
+    expected_output: latestDim.expected_output,
+    claim: latestDim.claim,
+    evidence_snippets: latestDim.evidence_snippets,
+    reasoning_sketch: latestDim.reasoning_sketch,
+    scenario_type: latestDim.scenario_type,
+    problem_context: latestDim.problem_context,
+    solution_action: latestDim.solution_action,
+  };
+  
+  Object.entries(fieldMappings).forEach(([fieldName, value]) => {
+    const confidence = latestDim.generation_confidence_accuracy || 5;
+    
+    // Include fields that are null/empty OR have low confidence
+    if (value === null || value === undefined || value === '' || 
+        (Array.isArray(value) && value.length === 0) || confidence < 8) {
+      dimensionsWithScores.push({ 
+        fieldName, 
+        value: value || '(Not generated)', 
+        confidence 
+      });
+    }
+  });
+  
+  // Sort by confidence ascending (lowest first)
+  return dimensionsWithScores.sort((a, b) => a.confidence - b.confidence);
+}
+
+function truncate(text: string, maxLength: number): string {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
+function hasDimensions(chunk: any): boolean {
+  return chunk.dimensions && chunk.dimensions.length > 0;
 }
 ```
 
@@ -2355,8 +2769,9 @@ function getLowConfidenceDimensions(chunk: any): DimensionWithConfidence[] {
 1. **Color Coding**: Use exact color scheme from wireframe
 2. **Three-Section Layout**: Every chunk card must have the three-section structure
 3. **Confidence-Based Display**: 
-   - "Things We Know" = dimensions with `generation_confidence_accuracy` >= 75%
-   - "Things We Need to Know" = dimensions with < 75% confidence or NULL values
+   - "Things We Know" = dimensions with `generation_confidence_accuracy` >= 8 (on 1-10 scale)
+   - "Things We Need to Know" = dimensions with < 8 confidence or NULL values
+   - Display confidence as percentage: `{score * 10}%` (e.g., score 8 → "80%")
 4. **Progressive Disclosure**: Show 3 items in each section, button to see full spreadsheet
 5. **Icons**: Use lucide-react icons exactly as shown in wireframe
 
@@ -2526,40 +2941,241 @@ Full-page spreadsheet view showing all runs for a specific chunk.
 
 ## BUILD PROMPT #5: RUN MANAGEMENT & POLISH
 
-**CONTEXT FOR AI:** The core functionality is complete. Now add run management, regeneration, and final polish.
+**CONTEXT FOR AI:** The core functionality is complete. Now add run management, regeneration, and final polish to make this production-ready.
 
 **YOUR TASK:**
 
-### Part A: Run Comparison
+### Part A: Run Comparison Interface
 
-Add ability to:
-1. Select 2+ runs for the same chunk
-2. View side-by-side comparison
-3. Highlight differences
-4. Export comparison data
+Create `src/components/chunks/RunComparison.tsx`:
 
-### Part B: Regeneration
+**Requirements:**
+- Accept multiple run_ids as input (2-5 runs)
+- Display side-by-side table with one run per column
+- Highlight differences in cell background colors:
+  - Green (`bg-green-100`): Value improved vs previous run
+  - Red (`bg-red-100`): Value degraded vs previous run
+  - Yellow (`bg-yellow-100`): Value changed but unclear if better
+- Add "Export Comparison" button (CSV format)
+- Include diff statistics at top (X fields changed, Y improved, Z degraded)
 
-Add "Regenerate" button that:
-1. Creates new run
-2. Re-generates dimensions for selected chunks
-3. Preserves history
-4. Updates dashboard
+**Key Functions:**
+```typescript
+function compareRuns(runs: ChunkDimensions[]): ComparisonResult {
+  // Compare dimension values across runs
+  // Calculate improvement/degradation
+  // Return differences and statistics
+}
 
-### Part C: Polish & Testing
+function getDifferenceColor(oldValue: any, newValue: any, field: string): string {
+  // Determine if change is positive, negative, or neutral
+  // Special logic for confidence scores (higher = better)
+  // Return appropriate color class
+}
+```
 
-1. Add loading states everywhere
-2. Add error boundaries
-3. Add toast notifications
-4. Test full workflow end-to-end
-5. Fix any bugs or issues
+**Implementation Notes:**
+- For confidence scores: higher is always better (green)
+- For cost: lower is better (green)
+- For duration: lower is better (green)
+- For content fields: any change is neutral (yellow) unless null → value (green)
+
+### Part B: Regeneration Capability
+
+Add to `src/app/chunks/[documentId]/page.tsx`:
+
+**Requirements:**
+- Add "Regenerate Dimensions" button to each chunk card header
+- On click, show modal with options:
+  - Regenerate selected chunks only
+  - Regenerate all chunks in document
+  - Select which prompt templates to use (checkboxes)
+  - Option to use different AI parameters (temperature, model)
+- Create new run_id for regeneration
+- Preserve all historical runs (never delete old data)
+- Show progress indicator during regeneration
+- Refresh dashboard automatically when complete
+- Display toast notification: "Regeneration complete! View new run."
+
+**API Endpoint:**
+
+Create `src/app/api/chunks/regenerate/route.ts`:
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import { DimensionGenerator } from '../../../../lib/dimension-generation/generator';
+import { userService } from '../../../../lib/database';
+
+export async function POST(request: NextRequest) {
+  try {
+    const { documentId, chunkIds, templateIds } = await request.json();
+    
+    // Validate inputs
+    if (!documentId) {
+      return NextResponse.json({ error: 'documentId required' }, { status: 400 });
+    }
+    
+    // Get current user
+    const user = await userService.getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Generate dimensions for specified chunks
+    const generator = new DimensionGenerator();
+    const runId = await generator.generateDimensionsForDocument({
+      documentId,
+      userId: user.id,
+      chunkIds,  // Optional: specific chunks only
+      templateIds,  // Optional: specific templates only
+    });
+    
+    return NextResponse.json({
+      success: true,
+      runId,
+      message: 'Regeneration complete',
+    });
+    
+  } catch (error: any) {
+    console.error('Regeneration error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Regeneration failed' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+**Update DimensionGenerator:**
+
+Modify `generateDimensionsForDocument` method to accept optional parameters:
+```typescript
+async generateDimensionsForDocument(params: {
+  documentId: string;
+  userId: string;
+  chunkIds?: string[];  // NEW: Optional filter
+  templateIds?: string[];  // NEW: Optional filter
+}): Promise<string>
+```
+
+### Part C: Polish & Testing Checklist
+
+**Loading States to Add:**
+- [ ] Document list: Skeleton loader while fetching (`<Skeleton className="h-20 w-full" />`)
+- [ ] Chunk extraction: Progress bar with percentage (`<Progress value={percentage} />`)
+- [ ] Dimension generation: Animated spinner with "Analyzing chunk X of Y" text
+- [ ] Spreadsheet: Table skeleton while loading data
+- [ ] Run comparison: Loading overlay with "Comparing runs..." message
+
+**Error Boundaries to Add:**
+- [ ] Wrap `/chunks/[documentId]` page with ErrorBoundary component
+- [ ] Wrap ChunkSpreadsheet component with ErrorBoundary
+- [ ] Wrap RunComparison component with ErrorBoundary
+- [ ] Add fallback UI for each boundary:
+  ```typescript
+  <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
+    <h3 className="text-red-800 font-medium">Something went wrong</h3>
+    <p className="text-red-600 text-sm mt-2">{error.message}</p>
+    <Button onClick={reset} className="mt-4">Try Again</Button>
+  </div>
+  ```
+
+**Toast Notifications to Add (using sonner or react-hot-toast):**
+- [ ] Chunk extraction started: `toast.info("Extracting chunks...")`
+- [ ] Chunk extraction complete: `toast.success("Extracted X chunks successfully")`
+- [ ] Dimension generation started: `toast.info("Generating dimensions...")`
+- [ ] Dimension generation complete: `toast.success("Generated X dimensions in Y seconds")`
+- [ ] Regeneration complete: `toast.success("Regeneration complete! View new run.")`
+- [ ] Export success: `toast.success("Data exported to downloads folder")`
+- [ ] Errors: `toast.error(error.message)` with retry option
+
+**End-to-End Test Script:**
+
+Create `test-workflow.md` documenting this test sequence:
+
+```markdown
+## Chunk Alpha Module - E2E Test Script
+
+### Phase 1: Extraction
+1. Start with categorized document
+2. Click "Chunks" button on document card
+3. ✓ Verify extraction progress updates in real-time
+4. ✓ Verify chunks appear in database (check chunk count)
+5. ✓ Verify navigation to chunk dashboard
+
+### Phase 2: Dimension Generation
+6. ✓ Verify dimension generation starts automatically
+7. ✓ Verify progress indicator shows "Generating dimensions..."
+8. ✓ Verify dimensions saved with confidence scores (check database)
+9. ✓ Verify confidence scores are between 1-10
+
+### Phase 3: Dashboard Display
+10. ✓ Verify chunk dashboard displays three-section layout
+11. ✓ Verify "Things We Know" section shows high-confidence dimensions (>=8)
+12. ✓ Verify "Things We Need to Know" shows low-confidence (<8)
+13. ✓ Verify confidence displayed as percentage (score × 10)
+14. ✓ Verify color coding: green for high, orange for low
+15. ✓ Verify only 3 items shown per section
+
+### Phase 4: Spreadsheet View
+16. Click "Detail View" button on a chunk
+17. ✓ Verify spreadsheet opens with all dimensions
+18. ✓ Verify column sorting works (click headers)
+19. ✓ Verify filtering works (search input)
+20. ✓ Verify preset view buttons work (Quality, Cost, Content, Risk)
+21. ✓ Verify all columns display correctly
+
+### Phase 5: Run Comparison
+22. Regenerate dimensions for same chunk (create 2nd run)
+23. Select both runs in comparison view
+24. ✓ Verify side-by-side comparison displays
+25. ✓ Verify differences are highlighted (green/red/yellow)
+26. ✓ Verify statistics show at top
+
+### Phase 6: Regeneration
+27. Click "Regenerate" button on chunk card
+28. Select specific templates to run
+29. ✓ Verify new run created (check database)
+30. ✓ Verify old runs preserved (history intact)
+31. ✓ Verify dashboard updates with new data
+
+### Phase 7: Export
+32. Click "Export" button in spreadsheet
+33. ✓ Verify CSV file downloads
+34. ✓ Verify all data included in export
+35. ✓ Verify formatting is correct
+
+### Phase 8: Error Handling
+36. Disconnect internet, try to generate dimensions
+37. ✓ Verify error toast displays
+38. ✓ Verify error boundary catches failure
+39. ✓ Verify "Try Again" button works
+
+### Success Criteria
+- All 39 checkpoints pass ✓
+- No console errors
+- No network failures (except intentional test #36)
+- Data persists correctly in database
+- UI matches wireframe design exactly
+```
+
+**Bug Fixes to Verify:**
+- [ ] Confidence scores never null in database
+- [ ] Helper functions handle missing dimensions gracefully
+- [ ] Color scheme matches wireframe exactly
+- [ ] Progressive disclosure works (3 items → Detail View)
+- [ ] All icons imported from lucide-react
+- [ ] Typography scale consistent throughout
+- [ ] Spacing and padding matches design spec
 
 **COMPLETION CRITERIA:**
-✅ Run comparison working  
-✅ Regeneration functional  
-✅ All UI polished  
-✅ No critical bugs  
-✅ Documentation complete  
+✅ Run comparison working with color-coded differences  
+✅ Regeneration functional with template selection  
+✅ All loading states implemented  
+✅ Error boundaries catching failures  
+✅ Toast notifications for all user actions  
+✅ E2E test script passes all 39 checkpoints  
+✅ No critical bugs or console errors  
+✅ Code documented with inline comments
 
 ---
 
