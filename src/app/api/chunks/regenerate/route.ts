@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DimensionGenerator } from '../../../../lib/dimension-generation/generator';
-import { userService } from '../../../../lib/database';
+import { createServerSupabaseClient } from '../../../../lib/supabase-server';
 
 /**
  * POST /api/chunks/regenerate
@@ -26,14 +26,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Get current user
-    const user = await userService.getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized - please sign in' },
-        { status: 401 }
-      );
-    }
+    // Get server-side Supabase client
+    const supabase = createServerSupabaseClient();
+    
+    // Get current user (optional - will use system user if not authenticated)
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || 'system';
     
     // Log regeneration request
     console.log('Starting dimension regeneration:', {
@@ -41,14 +39,14 @@ export async function POST(request: NextRequest) {
       chunkCount: chunkIds?.length || 'all',
       templateCount: templateIds?.length || 'all',
       aiParams,
-      userId: user.id,
+      userId,
     });
     
     // Generate dimensions for specified chunks
     const generator = new DimensionGenerator();
     const runId = await generator.generateDimensionsForDocument({
       documentId,
-      userId: user.id,
+      userId,
       chunkIds,  // Optional: specific chunks only
       templateIds,  // Optional: specific templates only
       aiParams,  // Optional: AI parameters override

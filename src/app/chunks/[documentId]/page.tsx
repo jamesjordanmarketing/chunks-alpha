@@ -11,7 +11,7 @@ import { Checkbox } from '../../../components/ui/checkbox';
 import { Label } from '../../../components/ui/label';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { 
-  FileText, CheckCircle, AlertCircle, Hash, ExternalLink, ArrowRight, RefreshCw, Loader2 
+  FileText, CheckCircle, AlertCircle, Hash, ExternalLink, ArrowRight, RefreshCw, Loader2, Grid3x3
 } from 'lucide-react';
 import { Chunk, ChunkDimensions, PromptTemplate } from '../../../types/chunks';
 import { toast } from 'sonner';
@@ -39,6 +39,7 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
   const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [regenAllChunks, setRegenAllChunks] = useState(false);
+  const [extracting, setExtracting] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -194,6 +195,38 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
     setRegenerateModalOpen(true);
   };
 
+  const handleStartExtraction = async () => {
+    try {
+      setExtracting(true);
+      toast.info('Starting chunk extraction and dimension generation...');
+      
+      const response = await fetch('/api/chunks/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentId: params.documentId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Extraction failed');
+      }
+
+      const result = await response.json();
+      toast.success(`Successfully extracted ${result.chunksExtracted} chunks!`);
+      
+      // Reload data
+      window.location.reload();
+      
+    } catch (error: any) {
+      console.error('Extraction error:', error);
+      toast.error(error.message || 'Failed to extract chunks');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   const handleRegenerateSubmit = async () => {
     try {
       setRegenerating(true);
@@ -275,20 +308,61 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
             <Badge variant="secondary">
               {chunksWithDimensions} / {totalChunks} Analyzed
             </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRegenerateAll}
-              disabled={regenerating}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
-              Regenerate All
-            </Button>
+            {totalChunks > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateAll}
+                disabled={regenerating}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
+                Regenerate All
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Individual chunk cards - FOLLOW THREE-SECTION PATTERN */}
-        {chunks.map((chunk) => {
+        {/* Show extraction button if no chunks exist */}
+        {totalChunks === 0 ? (
+          <Card className="p-8">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <Grid3x3 className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium mb-2">No Chunks Extracted Yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  This document hasn't been processed for chunk extraction yet. 
+                  Click the button below to start extracting chunks and generating AI dimensions.
+                </p>
+                <Button
+                  size="lg"
+                  onClick={handleStartExtraction}
+                  disabled={extracting}
+                  className="gap-2"
+                >
+                  {extracting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Extracting Chunks...
+                    </>
+                  ) : (
+                    <>
+                      <Grid3x3 className="h-4 w-4" />
+                      Start Chunk Extraction
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-3">
+                  This process may take 2-5 minutes depending on document size
+                </p>
+              </div>
+            </div>
+          </Card>
+        ) : (
+          <>
+            {/* Individual chunk cards - FOLLOW THREE-SECTION PATTERN */}
+            {chunks.map((chunk) => {
           const highConfDims = getHighConfidenceDimensions(chunk);
           const lowConfDims = getLowConfidenceDimensions(chunk);
           
@@ -422,6 +496,8 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
             </Card>
           );
         })}
+          </>
+        )}
       </div>
 
       {/* 4. Analysis Summary (4-column stats) */}

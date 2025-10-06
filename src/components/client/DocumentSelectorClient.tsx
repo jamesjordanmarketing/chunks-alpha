@@ -19,6 +19,7 @@ import {
   Grid3x3
 } from "lucide-react"
 import { Document } from "../../stores/workflow-store"
+import { toast } from "sonner"
 
 interface DocumentWithChunkStatus extends Document {
   hasChunks?: boolean
@@ -61,10 +62,41 @@ export function DocumentSelectorClient({ initialData }: Props) {
     // If document doesn't have chunks, trigger extraction first
     if (!document.hasChunks) {
       try {
-        // Navigate to chunks page which will handle extraction
-        router.push(`/chunks/${document.id}`)
-      } catch (error) {
-        console.error('Error navigating to chunks:', error)
+        toast.info('Starting chunk extraction...', { id: `extract-${document.id}` });
+        
+        // Start the extraction request
+        const extractPromise = fetch('/api/chunks/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ documentId: document.id })
+        });
+
+        // Navigate to chunks page after a brief delay to show the toast
+        setTimeout(() => {
+          router.push(`/chunks/${document.id}`);
+          toast.success('Extraction started! This may take 2-5 minutes.', { id: `extract-${document.id}` });
+        }, 500);
+
+        // Handle extraction result in background
+        extractPromise
+          .then(async (res) => {
+            if (!res.ok) {
+              const error = await res.json();
+              throw new Error(error.error || 'Failed to start extraction');
+            }
+            return res.json();
+          })
+          .then((result) => {
+            console.log('Extraction completed:', result);
+          })
+          .catch((error) => {
+            console.error('Extraction error:', error);
+            toast.error(`Extraction failed: ${error.message}`);
+          });
+        
+      } catch (error: any) {
+        console.error('Error starting extraction:', error);
+        toast.error('Failed to start extraction');
       }
     } else {
       // Navigate directly to view existing chunks

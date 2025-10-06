@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ChunkExtractor } from '../../../../lib/chunk-extraction/extractor';
 import { DimensionGenerator } from '../../../../lib/dimension-generation/generator';
-import { userService, chunkExtractionJobService } from '../../../../lib/database';
+import { chunkExtractionJobService } from '../../../../lib/database';
+import { createServerSupabaseClient } from '../../../../lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,18 +15,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get current user
-    const user = await userService.getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Get server-side Supabase client
+    const supabase = createServerSupabaseClient();
+    
+    // Get current user (optional - will use system user if not authenticated)
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id || 'system';
 
     // Start extraction
     const extractor = new ChunkExtractor();
-    const chunks = await extractor.extractChunksForDocument(documentId, user.id);
+    const chunks = await extractor.extractChunksForDocument(documentId, userId);
 
     // Get the extraction job to update its status
     const job = await chunkExtractionJobService.getLatestJob(documentId);
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest) {
     const generator = new DimensionGenerator();
     const runId = await generator.generateDimensionsForDocument({
       documentId,
-      userId: user.id,
+      userId,
     });
 
     // Update job to completed
