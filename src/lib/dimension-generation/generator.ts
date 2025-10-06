@@ -44,6 +44,8 @@ export class DimensionGenerator {
       total_duration_ms: 0,
       ai_model: AI_CONFIG.model,
       status: 'running',
+      error_message: null,
+      completed_at: null,
       created_by: userId,
     });
 
