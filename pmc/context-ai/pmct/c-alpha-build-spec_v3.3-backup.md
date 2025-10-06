@@ -487,13 +487,11 @@ CREATE TABLE IF NOT EXISTS chunk_dimensions (
     -- Timestamps
     generated_at TIMESTAMPTZ DEFAULT NOW(),
     
-    -- Foreign key constraint
-    CONSTRAINT idx_chunk_dims_chunk FOREIGN KEY (chunk_id) REFERENCES chunks(id)
+    -- Indexes
+    CONSTRAINT idx_chunk_dims_chunk FOREIGN KEY (chunk_id) REFERENCES chunks(id),
+    CREATE INDEX IF NOT EXISTS idx_chunk_dims_run ON chunk_dimensions(run_id),
+    CREATE INDEX IF NOT EXISTS idx_chunk_dims_chunk_id ON chunk_dimensions(chunk_id)
 );
-
--- Indexes for chunk_dimensions
-CREATE INDEX IF NOT EXISTS idx_chunk_dims_run ON chunk_dimensions(run_id);
-CREATE INDEX IF NOT EXISTS idx_chunk_dims_chunk_id ON chunk_dimensions(chunk_id);
 
 -- =====================================================
 -- TABLE: chunk_runs
@@ -728,9 +726,6 @@ ALTER TABLE documents ADD COLUMN IF NOT EXISTS total_chunks_extracted INTEGER DE
 -- COMPLETED: Database schema setup
 -- =====================================================
 ```
-DONEDONEDONEDONEDONEDONE
-
-
 
 **VERIFICATION:** After running the SQL, verify all tables exist:
 ```sql
@@ -743,11 +738,6 @@ ORDER BY table_name;
 You should see all 5 tables listed.
 
 ---
-
-DONEDONEDONEDONEDONEDONEDONE
-
-
-
 
 ### Step 2: API Configuration
 
