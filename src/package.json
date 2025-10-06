@@ -62,7 +62,6 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
-    "tiktoken": "^1.0.22",
     "vaul": "^1.1.2",
     "zustand": "^5.0.8"
   },

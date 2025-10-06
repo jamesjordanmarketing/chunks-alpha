@@ -25,6 +25,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Check for required environment variables
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('❌ ANTHROPIC_API_KEY not configured in environment variables');
+      return NextResponse.json(
+        { 
+          error: 'AI service not configured. Please set ANTHROPIC_API_KEY in Vercel environment variables.',
+          details: 'Missing ANTHROPIC_API_KEY'
+        },
+        { status: 500 }
+      );
+    }
     
     // Get server-side Supabase client
     const supabase = createServerSupabaseClient();

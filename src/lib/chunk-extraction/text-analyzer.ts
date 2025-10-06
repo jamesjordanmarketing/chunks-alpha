@@ -1,20 +1,27 @@
-import { encoding_for_model } from 'tiktoken';
 import { DocumentStructure, Section } from './types';
 
 export class TextAnalyzer {
-  private tokenizer: any;
-
   constructor() {
-    // Initialize tiktoken for Claude
-    this.tokenizer = encoding_for_model('gpt-4'); // Close enough for token counting
+    // No initialization needed for simple token counting
   }
 
   /**
-   * Count tokens in text
+   * Count tokens in text using approximation
+   * For serverless environments, we use a simple heuristic:
+   * ~1 token per 4 characters (conservative estimate for English)
+   * This is close enough for chunk size estimation
    */
   countTokens(text: string): number {
-    const tokens = this.tokenizer.encode(text);
-    return tokens.length;
+    // Simple approximation: 1 token ≈ 4 characters
+    // This is conservative and works well for English text
+    // More accurate would be ~3.5-4 chars per token
+    const charCount = text.length;
+    const approximateTokens = Math.ceil(charCount / 4);
+    
+    // Add bonus for special tokens (punctuation, etc.)
+    const specialChars = (text.match(/[^\w\s]/g) || []).length;
+    
+    return approximateTokens + Math.floor(specialChars * 0.2);
   }
 
   /**
