@@ -15,13 +15,19 @@ import {
   Filter,
   ArrowRight,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  Grid3x3
 } from "lucide-react"
 import { Document } from "../../stores/workflow-store"
 
+interface DocumentWithChunkStatus extends Document {
+  hasChunks?: boolean
+  chunkCount?: number
+}
+
 interface Props {
   initialData: {
-    documents: Document[]
+    documents: DocumentWithChunkStatus[]
     stats: {
       total: number
       pending: number
@@ -44,9 +50,26 @@ export function DocumentSelectorClient({ initialData }: Props) {
     return matchesSearch && matchesStatus
   })
 
-  const handleDocumentSelect = (document: Document) => {
+  const handleDocumentSelect = (document: DocumentWithChunkStatus) => {
     // Navigate to the first stage of the workflow
     router.push(`/workflow/${document.id}/stage1`)
+  }
+
+  const handleChunksView = async (document: DocumentWithChunkStatus, e: React.MouseEvent) => {
+    e.stopPropagation()
+    
+    // If document doesn't have chunks, trigger extraction first
+    if (!document.hasChunks) {
+      try {
+        // Navigate to chunks page which will handle extraction
+        router.push(`/chunks/${document.id}`)
+      } catch (error) {
+        console.error('Error navigating to chunks:', error)
+      }
+    } else {
+      // Navigate directly to view existing chunks
+      router.push(`/chunks/${document.id}`)
+    }
   }
 
   const getStatusIcon = (status: string) => {
@@ -228,16 +251,33 @@ export function DocumentSelectorClient({ initialData }: Props) {
                       </div>
                     </div>
 
-                    {/* Action Button */}
-                    <div className="flex-shrink-0">
+                    {/* Action Buttons */}
+                    <div className="flex-shrink-0 flex gap-2">
                       <Button 
                         onClick={() => handleDocumentSelect(document)}
                         className="flex items-center gap-2"
                         size="sm"
+                        variant={document.status === 'completed' ? 'outline' : 'default'}
                       >
                         {document.status === 'completed' ? 'Review' : 'Start Categorization'}
                         <ArrowRight className="h-4 w-4" />
                       </Button>
+                      
+                      {/* Chunks button - only show for completed documents */}
+                      {document.status === 'completed' && (
+                        <Button 
+                          onClick={(e) => handleChunksView(document, e)}
+                          className="flex items-center gap-2"
+                          size="sm"
+                          variant={document.hasChunks ? 'default' : 'secondary'}
+                        >
+                          <Grid3x3 className="h-4 w-4" />
+                          {document.hasChunks 
+                            ? `View Chunks (${document.chunkCount})` 
+                            : 'Start Chunking'
+                          }
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

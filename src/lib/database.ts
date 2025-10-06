@@ -741,3 +741,12 @@ export const initializeDatabase = async () => {
     console.error('Error initializing database:', error);
   }
 };
+
+// Chunk-related services
+export { 
+  chunkService, 
+  chunkDimensionService, 
+  chunkRunService, 
+  promptTemplateService, 
+  chunkExtractionJobService 
+} from './chunk-service';
