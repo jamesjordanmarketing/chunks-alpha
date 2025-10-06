@@ -21,7 +21,7 @@ async function getTestData() {
     
     // Test 3: Check AI configuration
     const aiConfigured = !!(process.env.ANTHROPIC_API_KEY);
-    const aiModel = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4.5-20241022';
+    const aiModel = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929';
     
     return {
       success: true,

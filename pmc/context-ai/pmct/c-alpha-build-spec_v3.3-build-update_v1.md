@@ -349,7 +349,7 @@ CREATE TABLE chunk_runs (
   total_dimensions INTEGER,                -- Count of populated dimension fields
   total_cost_usd NUMERIC(10,6),
   total_duration_ms INTEGER,
-  ai_model TEXT NOT NULL,                  -- e.g., "claude-sonnet-4.5-20241022"
+  ai_model TEXT NOT NULL,                  -- e.g., "claude-sonnet-4-5-20250929"
   status TEXT NOT NULL,                    -- running | completed | failed | cancelled
   error_message TEXT,
   started_at TIMESTAMP DEFAULT NOW(),
@@ -471,7 +471,7 @@ chunk_extraction_jobs (1:1 with documents for job tracking)
 - **Authentication:** Supabase Auth
 
 ### AI & ML
-- **Primary Model:** Claude Sonnet 4.5 (claude-sonnet-4.5-20241022)
+- **Primary Model:** Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
 - **Provider:** Anthropic
 - **Use Cases:**
   - Chunk boundary identification
@@ -780,7 +780,7 @@ Generates AI dimensions for chunks.
 - Batch size: 3 chunks (adjustable at line 71)
 - Temperature: 0.5 (adjustable at line 219)
 - Max tokens: 2048 (adjustable at line 218)
-- Model: claude-sonnet-4.5-20241022 (env var: ANTHROPIC_MODEL)
+- Model: claude-sonnet-4-5-20250929 (env var: ANTHROPIC_MODEL)
 
 **Cost Calculation:**
 ```typescript
@@ -1005,7 +1005,7 @@ Get run history for a document.
       "total_dimensions": 720,
       "total_cost_usd": 0.084,
       "total_duration_ms": 125000,
-      "ai_model": "claude-sonnet-4.5-20241022",
+      "ai_model": "claude-sonnet-4-5-20250929",
       "status": "completed",
       "started_at": "2025-10-06T10:00:00Z",
       "completed_at": "2025-10-06T10:02:05Z"
@@ -1066,7 +1066,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...  # Server-side only
 ANTHROPIC_API_KEY=sk-ant-api03-...
 
 # Optional: Override default AI model
-ANTHROPIC_MODEL=claude-sonnet-4.5-20241022
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 ```
 
 #### Optional
@@ -1088,7 +1088,7 @@ MAX_COST_PER_USER_DAILY=50.00
 ```typescript
 export const AI_CONFIG = {
   apiKey: process.env.ANTHROPIC_API_KEY || '',
-  model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4.5-20241022',
+  model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5-20250929',
   temperature: 0.5,       // 0 = deterministic, 1 = creative
   maxTokens: 2048,        // Maximum response length
   batchSize: 3,           // Chunks processed in parallel
@@ -1113,8 +1113,8 @@ export const AI_CONFIG = {
    - Decrease to reduce costs, increase for longer responses
 
 4. **Model** (Environment variable)
-   - Current: claude-sonnet-4.5-20241022
-   - Can switch to: claude-3-opus, claude-3-sonnet, etc.
+   - Current: claude-sonnet-4-5-20250929
+   - Can switch to: claude-3-5-sonnet-20241022, claude-3-opus-20240229, etc.
 
 ### Database Configuration
 
