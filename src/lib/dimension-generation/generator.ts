@@ -251,7 +251,10 @@ export class DimensionGenerator {
     });
 
     // Extract response
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '{}';
+    let responseText = message.content[0].type === 'text' ? message.content[0].text : '{}';
+    
+    // Strip markdown code blocks if present (Claude often wraps JSON in ```json ... ```)
+    responseText = responseText.replace(/^```json\s*\n?/i, '').replace(/\n?```\s*$/,'').trim();
     
     // Parse JSON response
     let dimensions: Partial<ChunkDimensions> = {};
@@ -263,6 +266,7 @@ export class DimensionGenerator {
       
     } catch (error) {
       console.error(`Failed to parse response for template ${template.template_name}:`, error);
+      console.error(`Response was: ${responseText.substring(0, 200)}`);
     }
 
     // Calculate cost (approximate)

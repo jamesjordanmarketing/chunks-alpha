@@ -25,8 +25,13 @@ export class AIChunker {
   }): Promise<ExtractionCandidate[]> {
     const { documentTitle, documentContent, primaryCategory } = params;
 
+    console.log(`Starting chunk extraction for document: ${documentTitle}`);
+    console.log(`Document length: ${documentContent.length} characters`);
+    console.log(`Category: ${primaryCategory}`);
+
     // First, detect document structure
     const structure = this.analyzer.detectStructure(documentContent);
+    console.log(`Detected ${structure.sections.length} sections, ${structure.totalTokens} tokens`);
 
     // Call AI to identify chunk candidates
     const prompt = this.buildExtractionPrompt(documentTitle, documentContent, primaryCategory, structure);
@@ -43,10 +48,15 @@ export class AIChunker {
 
     // Parse AI response
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    console.log(`AI response length: ${responseText.length} characters`);
+    console.log(`AI response preview: ${responseText.substring(0, 300)}`);
+    
     const candidates = this.parseExtractionResponse(responseText, documentContent);
+    console.log(`Parsed ${candidates.length} chunk candidates from AI response`);
 
     // Apply extraction limits
     const filtered = this.applyExtractionLimits(candidates);
+    console.log(`After applying limits: ${filtered.length} chunks`);
 
     return filtered;
   }
@@ -92,44 +102,63 @@ DOCUMENT CONTENT:
 ${content}
 ---
 
-TASK: Analyze this COMPLETE document and identify ALL candidate chunks. For each chunk, return:
+TASK: Analyze this COMPLETE document and identify ALL candidate chunks. 
+
+**CRITICAL**: You MUST return MULTIPLE chunks (typically 12-35 chunks total across all types). Each major section, procedure, claim, or example should be its own chunk.
+
+For each chunk, return:
 
 1. chunk_type: The type (Chapter_Sequential, Instructional_Unit, CER, or Example_Scenario)
 2. confidence: Your confidence score (0.0-1.0)
-3. start_line: Line number where chunk begins (1-indexed)
-4. end_line: Line number where chunk ends (inclusive)
+3. start_line: Line number where chunk begins (1-indexed, count from line 1)
+4. end_line: Line number where chunk ends (inclusive, actual last line with content)
 5. section_heading: Heading/title of this chunk (if any)
 6. reasoning: Brief explanation of why this qualifies as this chunk type
 
-Return your analysis as a JSON array. Be thorough - scan the ENTIRE document and identify MORE candidates than the targets; we'll rank and select the best ones.
+**IMPORTANT INSTRUCTIONS:**
+1. **Scan the ENTIRE document** from start to finish
+2. **Return MANY chunks** - at least 10-20 chunks for a typical document
+3. **Each distinct section** should be its own chunk (e.g., if there are 7 steps, return 7 chunks)
+4. **Don't combine sections** - split them into separate chunks
+5. **Be generous** with identification - identify MORE candidates than needed
 
-Example format:
+Example format (note: this is just 2 examples, but you should return 10+ chunks):
 [
   {
     "chunk_type": "Instructional_Unit",
     "confidence": 0.95,
-    "start_line": 42,
-    "end_line": 89,
-    "section_heading": "Document Categorization Workflow",
-    "reasoning": "Clear numbered steps with procedural instructions from line 42 to 89"
+    "start_line": 5,
+    "end_line": 12,
+    "section_heading": "Step 1: Discovery Mapping",
+    "reasoning": "Procedural instructions for discovery process"
   },
   {
     "chunk_type": "Chapter_Sequential",
     "confidence": 0.90,
-    "start_line": 120,
-    "end_line": 245,
-    "section_heading": "Stage 2: Category Selection",
-    "reasoning": "Major section covering the category selection process"
+    "start_line": 14,
+    "end_line": 22,
+    "section_heading": "Step 2: Customization Planning",
+    "reasoning": "Sequential section in the methodology"
+  },
+  {
+    "chunk_type": "Instructional_Unit",
+    "confidence": 0.92,
+    "start_line": 24,
+    "end_line": 30,
+    "section_heading": "Step 3: Technical Setup",
+    "reasoning": "Technical procedure with setup instructions"
   }
+  ... (continue for ALL sections in the document)
 ]
 
-CRITICAL: Ensure chunks:
-- Are substantial (at least 500 characters / ~10 lines)
-- Don't overlap
-- Cover different parts of the document
-- Have clear start and end boundaries
+**VALIDATION CHECKLIST:**
+✓ Have you scanned the ENTIRE document?
+✓ Have you returned at least 10 chunks?
+✓ Is each major section its own chunk?
+✓ Are chunks substantial (at least 5-10 lines each)?
+✓ Do chunks cover the full document from beginning to end?
 
-Return ONLY valid JSON, no other text.`;
+Return ONLY valid JSON array, no markdown, no other text.`;
   }
 
   private parseExtractionResponse(response: string, fullContent: string): ExtractionCandidate[] {
