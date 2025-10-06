@@ -2,9 +2,25 @@ import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 
 const supabaseUrl = `https://${projectId}.supabase.co`;
-const supabaseKey = publicAnonKey;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Check if we're running server-side (Node.js) with service role key
+const isServer = typeof window === 'undefined';
+const serviceRoleKey = isServer ? process.env.SUPABASE_SERVICE_ROLE_KEY : undefined;
+
+// Use service role key if available (server-side), otherwise use anon key (client-side)
+const supabaseKey = serviceRoleKey || publicAnonKey;
+
+// Configure auth options for server vs client
+const authOptions = serviceRoleKey
+  ? {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  : {};
+
+export const supabase = createClient(supabaseUrl, supabaseKey, authOptions);
 
 export type Database = {
   public: {
