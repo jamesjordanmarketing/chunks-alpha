@@ -11,7 +11,7 @@ import { Checkbox } from '../../../components/ui/checkbox';
 import { Label } from '../../../components/ui/label';
 import { Skeleton } from '../../../components/ui/skeleton';
 import { 
-  FileText, CheckCircle, AlertCircle, Hash, ExternalLink, ArrowRight, RefreshCw, Loader2, Grid3x3
+  FileText, CheckCircle, AlertCircle, Hash, ExternalLink, ArrowRight, RefreshCw, Loader2, Grid3x3, Table
 } from 'lucide-react';
 import { Chunk, ChunkDimensions, PromptTemplate } from '../../../types/chunks';
 import { toast } from 'sonner';
@@ -469,15 +469,26 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
                       <AlertCircle className="h-3 w-3" />
                       Things We Need to Know ({lowConfDims.length})
                     </h5>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-xs h-6 px-2 border-orange-300 text-orange-700 hover:bg-orange-100"
-                      onClick={() => router.push(`/chunks/${params.documentId}/spreadsheet/${chunk.id}`)}
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Detail View
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-xs h-6 px-2 border-orange-300 text-orange-700 hover:bg-orange-100"
+                        onClick={() => router.push(`/chunks/${params.documentId}/spreadsheet/${chunk.id}`)}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Detail View
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-6 px-2"
+                        onClick={() => router.push(`/chunks/${params.documentId}/dimensions/${chunk.id}`)}
+                      >
+                        <Table className="h-3 w-3 mr-1" />
+                        View All Dimensions
+                      </Button>
+                    </div>
                   </div>
                   {lowConfDims.length > 0 ? (
                     <ul className="space-y-1">
