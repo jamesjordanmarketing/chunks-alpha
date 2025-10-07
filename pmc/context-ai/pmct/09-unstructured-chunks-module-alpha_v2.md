@@ -100,7 +100,6 @@ E. Uses the OpenAI api standard interface (allow for choice of the api endpoint 
 
 F. Build very simple prompt contexts as a default for the robust context engineering we will do per prompt in the next iteration. We will investigate that separately. This iteration should though have the functionality to use multiple types of context engineering. Use very simple context. I.E. "This is an industry vertical research context prompt. Search these verticals [VERTICAL_INDUSTRY_PROMPT]". Then build the code to submit several different types of prompts based on the value of the AI context engineering type field described above. Use a Contract-styled format (JSON + JSON Schema) as the primary engineered context prompt format. Validate input and submit the JSON to the LLM API.
 
-
 G. Build the api calls necessary to extract "first pass" chunk dimension values all chunks that need AI context engineering (an example of a task that uses AI but does not need context engineering is asking the AI to extract a simple text string from a document. Those must be differentiated from those that need context engineering or "generative" answers). This involves the submission of the prompt format to the model correctly.
 
 H. All chunk, metadata, referential data, factual data, tags, labels, and generated dimensions content should be saved to well structured, normalized, human readable named and organized Supabase tables.
