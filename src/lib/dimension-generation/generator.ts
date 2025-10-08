@@ -336,6 +336,11 @@ export class DimensionGenerator {
         outcome_metrics: response.outcome_metrics,
         style_notes: response.style_notes,
       },
+      'training_pair_generation': {
+        prompt_candidate: response.prompt_candidate,
+        target_answer: response.target_answer,
+        style_directives: response.style_directives,
+      },
       'risk_assessment': {
         safety_tags: response.safety_tags,
         coverage_tag: response.coverage_tag,

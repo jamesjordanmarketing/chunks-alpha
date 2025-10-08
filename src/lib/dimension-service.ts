@@ -176,6 +176,9 @@ export const dimensionService = {
           case 'chunk_handle':
             value = chunk.chunk_handle;
             break;
+          case 'chunk_type':
+            value = chunk.chunk_type;
+            break;
           default:
             // All other dimensions come from chunk_dimensions table
             value = (dimensions as any)[meta.fieldName];
