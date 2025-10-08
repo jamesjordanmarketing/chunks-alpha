@@ -274,7 +274,7 @@ SELECT
   LEFT(chunk_text, 200) as chunk_preview,
   created_at
 FROM chunks
-WHERE id = '975284d7-924b-41c0-8c8a-9cc92d2f1502';
+WHERE id = '1da028a7-f957-4c21-a631-c18c72a7e00b'
 
 
 
