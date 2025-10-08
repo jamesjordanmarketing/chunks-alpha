@@ -151,6 +151,22 @@ export class DimensionGenerator {
     const startTime = Date.now();
     let totalCost = 0;
 
+    // Deterministic hash function for consistent split assignment
+    const hashCode = (str: string): number => {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+      }
+      return Math.abs(hash);
+    };
+
+    // Calculate deterministic split based on chunk ID
+    const hash = hashCode(chunk.id);
+    const splitValue = hash % 10; // Get value 0-9
+    const split = splitValue === 9 ? 'test' : splitValue === 8 ? 'dev' : 'train';
+    // Result: 0-7 = train (80%), 8 = dev (10%), 9 = test (10%)
+
     // Initialize dimension record with mechanical data
     const dimensions: Partial<ChunkDimensions> = {
       chunk_id: chunk.id,
@@ -170,6 +186,13 @@ export class DimensionGenerator {
       pii_flag: false,
       review_status: 'unreviewed',
       include_in_training_yn: true,
+      data_split_train_dev_test: split,
+      
+      // Labeling metadata for provenance tracking
+      label_source_auto_manual_mixed: 'auto',
+      label_model: AI_CONFIG.model,
+      labeled_by: 'system',
+      label_timestamp_iso: new Date().toISOString(),
       
       // Meta-dimensions - will be calculated after dimension generation
       generation_confidence_precision: null,
