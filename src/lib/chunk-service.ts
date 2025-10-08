@@ -162,7 +162,10 @@ export const promptTemplateService = {
       .eq('is_active', true);
     
     if (chunkType) {
-      query = query.contains('applicable_chunk_types', [chunkType]);
+      // Match templates that either:
+      // 1. Have NULL applicable_chunk_types (applies to all chunk types), OR
+      // 2. Contain this specific chunk type in their array
+      query = query.or(`applicable_chunk_types.is.null,applicable_chunk_types.cs.{${chunkType}}`);
     }
     
     const { data, error } = await query.order('template_type');

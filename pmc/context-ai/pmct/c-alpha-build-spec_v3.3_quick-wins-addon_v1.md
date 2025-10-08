@@ -1054,7 +1054,7 @@ After completing Phase 1 and Phase 2:
      target_answer,
      style_directives
    FROM chunk_dimensions
-   WHERE chunk_id = '<your-test-chunk-id>'
+   WHERE chunk_id = 'b96530dd-7620-41f7-9d64-1c8c738375ce
    ORDER BY generated_at DESC
    LIMIT 1;
    ```
@@ -1117,4 +1117,194 @@ import { AI_CONFIG } from '../ai-config';
 ---
 
 **End of Quick Wins Implementation Specification**
+
+## Follow Up Validation & Testing Notes
+
+### Analysis: Training Pair Generation Fields Returning NULL
+**Date:** October 8, 2025  
+**Analyst:** Claude (AI Assistant)  
+**Issue:** `prompt_candidate`, `target_answer`, and `style_directives` are NULL in database despite mapping being added
+
+#### Investigation Summary
+
+**Test Query Results:**
+```sql
+SELECT chunk_id, label_source_auto_manual_mixed, label_model, labeled_by, 
+       label_timestamp_iso, data_split_train_dev_test, 
+       prompt_candidate, target_answer, style_directives
+FROM chunk_dimensions
+WHERE chunk_id = 'b96530dd-7620-41f7-9d64-1c8c738375ce'
+ORDER BY generated_at DESC LIMIT 1;
+```
+
+Results show:
+- ✅ Labeling fields populated correctly (auto, claude-sonnet-4-5-20250929, system)
+- ✅ Data split assigned correctly (test)
+- ❌ Training Pair fields are NULL (prompt_candidate, target_answer, style_directives)
+
+#### Root Cause Identified
+
+**BUG LOCATION:** `src/lib/chunk-service.ts`, lines 158-172  
+**Function:** `promptTemplateService.getActiveTemplates()`
+
+**The Problem:**
+
+The `getActiveTemplates` function filters templates based on chunk type:
+
+```typescript
+async getActiveTemplates(chunkType?: ChunkType): Promise<PromptTemplate[]> {
+  let query = supabase
+    .from('prompt_templates')
+    .select('*')
+    .eq('is_active', true);
+  
+  if (chunkType) {
+    query = query.contains('applicable_chunk_types', [chunkType]);
+  }
+  
+  const { data, error } = await query.order('template_type');
+  
+  if (error) throw error;
+  return data || [];
+}
+```
+
+**Line 165 is the culprit:**
+```typescript
+query = query.contains('applicable_chunk_types', [chunkType]);
+```
+
+**The Issue:**
+- The Training Pair Generation template has `applicable_chunk_types = NULL` (per spec line 193)
+- NULL means "applies to ALL chunk types"
+- The `.contains()` operator only matches array values, NOT NULL
+- Therefore, the template is **never retrieved** for any chunk
+
+**Call Chain:**
+1. `generateDimensionsForChunk()` calls `getActiveTemplates(chunk.chunk_type)` (generator.ts:205)
+2. `getActiveTemplates()` filters with `.contains('applicable_chunk_types', [chunkType])` 
+3. NULL values don't match `.contains()` query
+4. Training Pair template is excluded from results
+5. Template never executes → fields never populate → NULL in database
+
+#### Why the Mapping Addition Didn't Fix It
+
+The mapping added in Task 1.3 (lines 339-343 in generator.ts) is **correct**:
+
+```typescript
+'training_pair_generation': {
+  prompt_candidate: response.prompt_candidate,
+  target_answer: response.target_answer,
+  style_directives: response.style_directives,
+},
+```
+
+**BUT:** The mapping never runs because the template is never fetched in the first place. It's like adding a translation dictionary for a language the system never speaks to.
+
+#### The Correct Fix
+
+The `getActiveTemplates()` function needs to handle NULL `applicable_chunk_types` as "match all":
+
+```typescript
+async getActiveTemplates(chunkType?: ChunkType): Promise<PromptTemplate[]> {
+  let query = supabase
+    .from('prompt_templates')
+    .select('*')
+    .eq('is_active', true);
+  
+  if (chunkType) {
+    // Match templates that either:
+    // 1. Have NULL applicable_chunk_types (applies to all), OR
+    // 2. Contain this specific chunk type in their array
+    query = query.or(`applicable_chunk_types.is.null,applicable_chunk_types.cs.{${chunkType}}`);
+  }
+  
+  const { data, error } = await query.order('template_type');
+  
+  if (error) throw error;
+  return data || [];
+}
+```
+
+**Key Change:**
+- Old: `.contains('applicable_chunk_types', [chunkType])` - only matches arrays containing chunk type
+- New: `.or('applicable_chunk_types.is.null,applicable_chunk_types.cs.{chunkType}')` - matches NULL OR arrays containing chunk type
+
+#### Secondary Issue: Limited Logging
+
+**Current Logging:**
+- ✅ Error logging exists (lines 291-292 in generator.ts) for JSON parse failures
+- ❌ No logging of successful API responses
+- ❌ No logging of which templates were retrieved/executed
+- ❌ No logging of raw Claude API responses
+
+**Suggested Improvements (for future debugging):**
+1. Log templates retrieved: `console.log('Retrieved templates:', templates.map(t => t.template_type))`
+2. Log API responses: `console.log('Claude response for', template.template_type, responseText.substring(0, 200))`
+3. Optional: Write responses to flat files in `system/api-logs/` directory with timestamps
+
+**P.S. on Logging:** Currently there is NO system for logging API responses to disk. All logging is console-only and ephemeral. Consider adding:
+```typescript
+// In executePromptTemplate, after receiving response:
+const fs = require('fs');
+const logPath = `./system/api-logs/${new Date().toISOString()}_${template.template_type}.json`;
+fs.writeFileSync(logPath, JSON.stringify({ prompt, response: responseText, template }, null, 2));
+```
+
+#### Impact Assessment
+
+**Affected Prompts:**
+- Only `training_pair_generation` template (it's the only one with NULL `applicable_chunk_types`)
+- Other templates have explicit chunk type arrays and work correctly
+
+**Affected Fields:**
+- `prompt_candidate` (never populated)
+- `target_answer` (never populated)  
+- `style_directives` (never populated)
+
+**Data Integrity:**
+- ALL existing dimension records have NULL for these 3 fields
+- Will need full regeneration after fix to populate historical data
+
+#### Verification Steps (After Fix)
+
+1. **Verify template retrieval:**
+   ```typescript
+   const templates = await promptTemplateService.getActiveTemplates('Chapter_Sequential');
+   console.log(templates.map(t => t.template_type));
+   // Should include 'training_pair_generation'
+   ```
+
+2. **Test dimension generation:**
+   - Pick any chunk
+   - Regenerate dimensions
+   - Query database for training pair fields
+   - Should see populated values
+
+3. **Check SQL directly:**
+   ```sql
+   SELECT template_type, applicable_chunk_types
+   FROM prompt_templates
+   WHERE template_type = 'training_pair_generation';
+   -- Verify NULL value is intentional
+   ```
+
+#### Summary
+
+**Status:** ❌ Bug identified, NOT fixed (per user request - analysis only)
+
+**Issue:** Template filtering logic doesn't handle NULL `applicable_chunk_types` correctly
+
+**Solution:** Update `.contains()` query to `.or()` query that matches NULL OR specific chunk type
+
+**Next Step:** Implement fix in Task 1.3.1 (new task to add to Phase 1)
+
+**Estimated Fix Time:** 5 minutes (change 1 line of code, test)
+
+**Testing Required After Fix:** 
+- Unit test template retrieval with NULL applicable_chunk_types
+- Integration test full dimension generation
+- Verify all 6 templates execute for test chunk
+
+---
 
