@@ -5,9 +5,13 @@ import {
   chunkDimensionService, 
   chunkRunService, 
   promptTemplateService,
-  documentCategoryService 
+  documentCategoryService,
+  apiResponseLogService
 } from '../database';
 import { ChunkDimensions, Chunk, PromptTemplate, ChunkType } from '../../types/chunks';
+
+// Configuration for API response logging
+const ENABLE_API_LOGGING = true; // Set to false to disable logging
 
 export class DimensionGenerator {
   private client: Anthropic;
@@ -16,6 +20,58 @@ export class DimensionGenerator {
     this.client = new Anthropic({
       apiKey: AI_CONFIG.apiKey,
     });
+  }
+
+  /**
+   * Log Claude API response to database for debugging and auditing
+   * Non-blocking - failures will not interrupt dimension generation
+   */
+  private async logClaudeResponse(logData: {
+    chunkId: string;
+    runId: string;
+    template: PromptTemplate;
+    prompt: string;
+    chunkTextPreview: string;
+    documentCategory: string;
+    aiParams: { temperature: number; model: string };
+    claudeMessage: any;
+    parsedDimensions: Partial<ChunkDimensions>;
+    parseError: string | null;
+    cost: number;
+    inputTokens: number;
+    outputTokens: number;
+  }): Promise<void> {
+    // Skip if logging is disabled
+    if (!ENABLE_API_LOGGING) {
+      return;
+    }
+
+    try {
+      await apiResponseLogService.createLog({
+        chunk_id: logData.chunkId,
+        run_id: logData.runId,
+        template_type: logData.template.template_type,
+        template_name: logData.template.template_name,
+        model: logData.aiParams.model,
+        temperature: logData.aiParams.temperature,
+        max_tokens: 2048,
+        prompt: logData.prompt,
+        chunk_text_preview: logData.chunkTextPreview.substring(0, 200),
+        document_category: logData.documentCategory,
+        claude_response: logData.claudeMessage,
+        parsed_successfully: logData.parseError === null,
+        extraction_error: logData.parseError,
+        dimensions_extracted: logData.parsedDimensions,
+        input_tokens: logData.inputTokens,
+        output_tokens: logData.outputTokens,
+        estimated_cost_usd: logData.cost,
+      });
+      
+      console.log(`✅ Logged API response: ${logData.template.template_type}`);
+    } catch (error) {
+      // Log error but don't throw - logging failures should not break dimension generation
+      console.error('⚠️ Failed to log Claude API response:', error);
+    }
   }
 
   /**
@@ -215,6 +271,7 @@ export class DimensionGenerator {
         template,
         chunk,
         documentCategory,
+        runId,
         aiParams,  // Pass AI params for potential override
       });
 
@@ -248,12 +305,13 @@ export class DimensionGenerator {
     template: PromptTemplate;
     chunk: Chunk;
     documentCategory: string;
+    runId: string;
     aiParams?: {
       temperature?: number;
       model?: string;
     };
   }): Promise<{ dimensions: Partial<ChunkDimensions>; cost: number }> {
-    const { template, chunk, documentCategory, aiParams } = params;
+    const { template, chunk, documentCategory, runId, aiParams } = params;
 
     // Build prompt by replacing placeholders
     const prompt = template.prompt_text
@@ -262,11 +320,15 @@ export class DimensionGenerator {
       .replace('{primary_category}', documentCategory)
       .replace('{chunk_text}', chunk.chunk_text);
 
+    // Extract model and temperature for logging
+    const modelToUse = aiParams?.model || AI_CONFIG.model;
+    const temperatureToUse = aiParams?.temperature !== undefined ? aiParams.temperature : 0.5;
+
     // Call Claude API (with optional parameter overrides)
     const message = await this.client.messages.create({
-      model: aiParams?.model || AI_CONFIG.model,
+      model: modelToUse,
       max_tokens: 2048,
-      temperature: aiParams?.temperature !== undefined ? aiParams.temperature : 0.5,
+      temperature: temperatureToUse,
       messages: [{
         role: 'user',
         content: prompt,
@@ -281,6 +343,8 @@ export class DimensionGenerator {
     
     // Parse JSON response
     let dimensions: Partial<ChunkDimensions> = {};
+    let parseError: string | null = null;
+
     try {
       const parsed = JSON.parse(responseText);
       
@@ -288,6 +352,7 @@ export class DimensionGenerator {
       dimensions = this.mapResponseToDimensions(parsed, template.template_type);
       
     } catch (error) {
+      parseError = error instanceof Error ? error.message : String(error);
       console.error(`Failed to parse response for template ${template.template_name}:`, error);
       console.error(`Response was: ${responseText.substring(0, 200)}`);
     }
@@ -296,6 +361,26 @@ export class DimensionGenerator {
     const inputTokens = Math.ceil(prompt.length / 4);  // Rough estimate
     const outputTokens = Math.ceil(responseText.length / 4);
     const cost = (inputTokens * 0.000003) + (outputTokens * 0.000015);  // Claude pricing
+
+    // Log API response (non-blocking, will not throw errors)
+    await this.logClaudeResponse({
+      chunkId: chunk.id,
+      runId: runId,
+      template,
+      prompt,
+      chunkTextPreview: chunk.chunk_text,
+      documentCategory,
+      aiParams: {
+        model: modelToUse,
+        temperature: temperatureToUse,
+      },
+      claudeMessage: message,
+      parsedDimensions: dimensions,
+      parseError,
+      cost,
+      inputTokens,
+      outputTokens,
+    });
 
     return { dimensions, cost };
   }

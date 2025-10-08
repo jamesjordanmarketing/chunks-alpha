@@ -750,3 +750,6 @@ export {
   promptTemplateService, 
   chunkExtractionJobService 
 } from './chunk-service';
+
+// API response logging
+export { apiResponseLogService } from './api-response-log-service';
