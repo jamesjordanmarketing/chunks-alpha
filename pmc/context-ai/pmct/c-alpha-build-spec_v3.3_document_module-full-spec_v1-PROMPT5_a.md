@@ -1,3 +1,69 @@
+# PROMPT 5a: Metadata & Preview Features (Part 1 of 4)
+**Module:** Document Upload & Processing  
+**Phase:** Metadata Management & Content Preview  
+**Estimated Time:** 3-4 hours total (this is part 1)  
+**Prerequisites:** Prompts 1-4 completed (Upload, extraction, and queue management functional)
+
+---
+
+## CONTEXT FOR CODING AGENT
+
+You are implementing Phase 5 of the document upload module for "Bright Run." In Prompts 1-4, you created the database schema, upload API, upload UI, text extraction engine, and real-time queue management. Now you will build metadata editing capabilities and content preview features.
+
+### What Was Built in Previous Prompts
+✅ **Prompt 1:** Database schema, Storage configuration, NPM packages, Upload API  
+✅ **Prompt 2:** Upload Dropzone UI, Upload Page, Dashboard integration  
+✅ **Prompt 3:** Text Extractor Service, Document Processor, Processing API  
+✅ **Prompt 4:** Status Polling, Upload Queue, Statistics, Filters
+
+### Current State
+- Users can upload files and monitor processing status in real-time
+- Text is automatically extracted from uploaded files
+- Upload queue displays all documents with filters and search
+- Users can view, retry, and delete documents
+- Missing: Users cannot edit metadata or preview extracted content
+
+### Your Task in Prompt 5
+1. ✅ Create Metadata Update API Endpoint (PATCH /api/documents/:id) **← THIS PART**
+2. ⏳ Create Metadata Edit Form Component (edit title, version, URL, date)
+3. ⏳ Create Content Preview Component (show extracted text)
+4. ⏳ Create Error Details Dialog (detailed error information)
+5. ⏳ Update Upload Queue to integrate new features
+
+### Success Criteria
+- Users can edit document metadata after upload
+- Metadata changes saved to database via API
+- Content preview shows extracted text with statistics
+- Error details show full error messages and retry options
+- All changes integrate seamlessly with existing queue
+- Form validation works (URL format, date validation)
+
+---
+
+## IMPORTANT: This is Part 1 of 4
+This file contains **STEP 1 only**. After completing this step, proceed to PROMPT5_b.md for the next steps.
+
+---
+
+
+
+====================
+
+
+
+## STEP 1: Create Metadata Update API Endpoint
+
+**DIRECTIVE:** You shall create an API endpoint that allows authenticated users to update metadata fields for their documents.
+
+**Instructions:**
+1. Create directory: `src/app/api/documents/[id]/`
+2. Create file: `src/app/api/documents/[id]/route.ts`
+3. Copy the complete code below
+4. Save and verify no TypeScript errors
+
+**File:** `src/app/api/documents/[id]/route.ts`
+
+```typescript
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 
@@ -429,3 +495,62 @@ export async function DELETE(
     );
   }
 }
+```
+
+**Explanation:**
+- **PATCH Method:** Updates metadata fields (title, version, URL, date)
+- **GET Method:** Retrieves full document details including content
+- **DELETE Method:** Removes document and file from storage
+- **Validation:** URL format, date format, title length checks
+- **Security:** Verifies user ownership before any operations
+- **Immutable Fields:** Cannot change content, file_path, status, author_id
+
+**Verification:**
+1. File compiles with no TypeScript errors
+2. Endpoints will be available at `/api/documents/:id`
+
+**Testing:**
+```bash
+# Update metadata
+curl -X PATCH "http://localhost:3000/api/documents/DOC_ID" \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Updated Title","doc_version":"v2.0"}'
+
+# Get document
+curl -X GET "http://localhost:3000/api/documents/DOC_ID" \
+  -H "Authorization: Bearer TOKEN"
+
+# Delete document
+curl -X DELETE "http://localhost:3000/api/documents/DOC_ID" \
+  -H "Authorization: Bearer TOKEN"
+```
+
+
+
+++++++++++++++++++++++++
+
+
+
+## STEP 1 COMPLETE - PROCEED TO NEXT PART
+
+✅ **You have completed STEP 1 of PROMPT 5**
+
+**What was built:**
+- Metadata Update API Endpoint with PATCH, GET, and DELETE methods
+- Full validation for title, URL, and date fields
+- Security checks for authentication and ownership
+- Complete error handling
+
+**Next Steps:**
+Continue to **PROMPT5_b.md** to implement:
+- STEP 2: Create Metadata Edit Form Component
+
+**Verification before continuing:**
+- [ ] API endpoint file created at `src/app/api/documents/[id]/route.ts`
+- [ ] File compiles with no TypeScript errors
+- [ ] All imports resolve correctly
+
+---
+
+**END OF PROMPT 5a (Part 1 of 4)**

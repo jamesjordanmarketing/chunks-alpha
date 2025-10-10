@@ -508,3 +508,280 @@ All 6 prompts are ready for use with any coding AI agent (Claude, GPT-4, etc.). 
 ---
 
 **🎉 All prompts complete and ready to build an amazing upload module! 🎉**
+
+
+## APPENDIX 1
+## ✅ PROMPT 3 COMPLETE: Text Extraction & Processing
+
+I have successfully implemented the text extraction and processing engine for the document upload module. Here's what was built:
+
+### 📦 Components Created
+
+#### 1. **Text Extractor Service**
+**Location:** `src/lib/file-processing/text-extractor.ts`
+
+**Features:**
+- ✅ **PDF Extraction** using `pdf-parse` library
+  - Handles text-based PDFs
+  - Detects scanned/image-only PDFs and reports error
+  - Minimum text length validation
+  
+- ✅ **DOCX/DOC Extraction** using `mammoth` library
+  - Extracts raw text from Word documents
+  - Handles document structure warnings
+  - Supports both .docx and .doc formats
+  
+- ✅ **HTML Extraction** using `html-to-text` library
+  - Converts HTML to clean plain text
+  - Skips images, scripts, and styles
+  - Preserves text structure and newlines
+  
+- ✅ **Plain Text Extraction** (TXT, MD, RTF)
+  - UTF-8 encoding with fallback to latin1
+  - Direct buffer reading
+  - Encoding detection for edge cases
+
+**Error Handling:**
+- Custom `ExtractionError` class with error types:
+  - `CORRUPT_FILE` - File is damaged or unreadable
+  - `UNSUPPORTED_CONTENT` - File has no extractable text
+  - `TIMEOUT` - Processing took too long
+  - `SERVER_ERROR` - Unexpected server error
+- Recoverable vs non-recoverable error classification
+- Detailed error messages for debugging
+
+**Text Cleaning:**
+- Removes null bytes
+- Normalizes line endings (`\r\n` → `\n`)
+- Removes excessive whitespace
+- Trims leading/trailing whitespace
+
+**Validation:**
+- Minimum length check (100 characters)
+- Maximum length check (10MB)
+- Printable character ratio check (70% threshold)
+- Prevents binary/corrupted content from passing
+
+#### 2. **Document Processor**
+**Location:** `src/lib/file-processing/document-processor.ts`
+
+**Workflow Orchestration:**
+1. ✅ Fetch document record from database
+2. ✅ Validate document exists and has required fields
+3. ✅ Update status to `processing` with progress tracking
+4. ✅ Download file from Supabase Storage
+5. ✅ Extract text using TextExtractor
+6. ✅ Validate extracted text quality
+7. ✅ Update database with content and status
+8. ✅ Handle errors and update error messages
+
+**Progress Tracking:**
+- 0% - Initial state
+- 10% - Status updated to processing
+- 30% - File downloaded from storage
+- 70% - Text extraction completed
+- 85% - Validation passed
+- 100% - Database updated, processing complete
+
+**Error Recovery:**
+- Stores error messages in `processing_error` field
+- Updates status to `error` on failure
+- `retryProcessing()` method to retry failed documents
+- Resets all processing fields before retry
+
+**Timestamps:**
+- `processing_started_at` - When processing begins
+- `processing_completed_at` - When processing ends (success or error)
+
+#### 3. **Processing API Endpoint**
+**Location:** `src/app/api/documents/process/route.ts`
+
+**POST Method** - Trigger new processing:
+- ✅ Authentication via Bearer token
+- ✅ Document ownership verification
+- ✅ Calls DocumentProcessor to extract text
+- ✅ Returns success/error response
+- ✅ 5-minute max duration for large files
+
+**PUT Method** - Retry failed processing:
+- ✅ Same authentication and ownership checks
+- ✅ Calls `retryProcessing()` to reset and reprocess
+- ✅ Returns retry result
+
+**HTTP Status Codes:**
+- `200` - Processing successful
+- `400` - Bad request (missing documentId)
+- `401` - Authentication required/invalid
+- `403` - Unauthorized (doesn't own document)
+- `404` - Document not found
+- `500` - Processing failed
+
+**Security:**
+- User can only process their own documents
+- Token validation on every request
+- Error details logged but sanitized for response
+
+### 🔄 Integration Points
+
+#### Upload API Integration
+The upload API (created in Prompt 1) already has code to trigger processing:
+
+```typescript:198:210:src/app/api/documents/upload/route.ts
+    const processUrl = `${request.nextUrl.origin}/api/documents/process`;
+    
+    fetch(processUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      body: JSON.stringify({ documentId: document.id })
+    }).catch(err => {
+      // Log error but don't fail the upload
+      console.error('Failed to trigger text extraction:', err);
+    });
+```
+
+**Flow:**
+1. User uploads file via `/upload` page
+2. Upload API creates document record with status `uploaded`
+3. Upload API triggers processing API (non-blocking)
+4. Processing API extracts text in background
+5. Status updates to `processing` → `completed` or `error`
+
+### 📊 Database Updates
+
+The processing system uses the columns added in Prompt 1:
+
+| Column | Purpose |
+|--------|---------|
+| `status` | `uploaded` → `processing` → `completed` or `error` |
+| `processing_progress` | 0-100 percentage for UI feedback |
+| `processing_started_at` | Timestamp when processing begins |
+| `processing_completed_at` | Timestamp when processing ends |
+| `processing_error` | Error message if processing fails |
+| `content` | Extracted text stored here |
+| `source_type` | Used to determine extraction method |
+| `file_path` | Used to download file from storage |
+
+### 🔍 Verification Results
+
+✅ **No TypeScript errors** - All files compile successfully  
+✅ **No linter errors** - Code follows project standards  
+✅ **All imports resolved** - Dependencies available  
+✅ **NPM packages verified** - pdf-parse, mammoth, html-to-text installed
+
+**Package Versions:**
+- `pdf-parse`: ^1.1.1
+- `mammoth`: ^1.6.0
+- `html-to-text`: ^9.0.5
+
+### 🧪 Testing Guide
+
+You can now test the complete upload and processing flow:
+
+#### 1. **Upload a Test Document**
+```bash
+# Navigate to http://localhost:3000/upload
+# Upload a PDF, DOCX, TXT, or HTML file
+```
+
+#### 2. **Monitor Processing**
+Check the console logs for detailed processing information:
+```
+[DocumentProcessor] Starting processing for document: <uuid>
+[DocumentProcessor] Fetching document record...
+[DocumentProcessor] Updating status to 'processing'...
+[DocumentProcessor] Downloading file from storage: <path>
+[DocumentProcessor] File downloaded: <bytes> bytes
+[DocumentProcessor] Extracting text from pdf file...
+[DocumentProcessor] Text extracted: <chars> characters
+[DocumentProcessor] Updating database with extracted content...
+[DocumentProcessor] Processing completed successfully for <uuid>
+```
+
+#### 3. **Check Database**
+Query the `documents` table to verify:
+- `status` = `completed`
+- `content` contains extracted text
+- `processing_progress` = 100
+- `processing_completed_at` has timestamp
+
+#### 4. **Test Error Cases**
+- Upload a scanned PDF (image-only) → Should error with "no extractable text"
+- Upload a corrupted file → Should error with appropriate message
+- Upload an empty file → Should error with "too short"
+
+#### 5. **Test Retry**
+For documents in error state, call the retry endpoint:
+```bash
+PUT /api/documents/process
+{
+  "documentId": "<uuid>"
+}
+```
+
+### 📈 Performance Characteristics
+
+**Processing Times (estimated):**
+- TXT/MD files: < 1 second
+- HTML files: 1-2 seconds
+- PDF files: 2-10 seconds (depends on page count)
+- DOCX files: 2-5 seconds
+
+**File Size Limits:**
+- Maximum upload: 100MB per file
+- Maximum extracted text: 10MB (10,485,760 characters)
+
+**Concurrency:**
+- Processing happens sequentially per document
+- Multiple documents can process simultaneously (Node.js async)
+- 5-minute timeout per document
+
+### 🚀 Next Steps
+
+The text extraction module is now complete! Here's what you can do next:
+
+**Immediate:**
+1. Test the complete upload → extraction flow
+2. Upload various file types to verify extraction quality
+3. Check extracted content in database
+
+**Future Enhancements:**
+1. Add OCR support for scanned PDFs (using Tesseract.js)
+2. Implement document summarization using Claude API
+3. Add support for Excel/CSV files
+4. Create admin dashboard to monitor processing status
+5. Add bulk retry functionality for failed documents
+
+### 🔧 Troubleshooting
+
+**Common Issues:**
+
+1. **"PDF contains no extractable text"**
+   - File is likely a scanned image
+   - Solution: Implement OCR or manually type content
+
+2. **"Text file reading failed"**
+   - File encoding may be unusual
+   - Solution: Check file encoding, try latin1 fallback
+
+3. **"Processing timeout"**
+   - File is very large
+   - Solution: Increase `maxDuration` in route.ts
+
+4. **"Failed to download file"**
+   - Storage bucket RLS policy issue
+   - Solution: Check Supabase storage permissions
+
+### 📝 Summary
+
+All components are implemented and ready for use:
+- ✅ Text Extractor Service (multi-format support)
+- ✅ Document Processor (orchestration + error handling)
+- ✅ Processing API Endpoint (POST + PUT methods)
+- ✅ Integration with Upload API (automatic processing)
+- ✅ Progress tracking and error recovery
+
+The document upload and processing module is now fully functional! Users can upload documents, and text extraction will happen automatically in the background.
+

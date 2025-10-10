@@ -24,6 +24,7 @@ import { toast } from "sonner"
 interface DocumentWithChunkStatus extends Document {
   hasChunks?: boolean
   chunkCount?: number
+  file_path?: string | null
 }
 
 interface Props {
@@ -42,13 +43,22 @@ export function DocumentSelectorClient({ initialData }: Props) {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'categorizing' | 'completed'>('all')
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'uploaded' | 'seed'>('all')
   
   const filteredDocuments = initialData.documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doc.summary.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || doc.status === statusFilter
     
-    return matchesSearch && matchesStatus
+    // Apply source filter
+    let matchesSource = true
+    if (sourceFilter === 'uploaded') {
+      matchesSource = doc.file_path !== null && doc.file_path !== undefined
+    } else if (sourceFilter === 'seed') {
+      matchesSource = !doc.file_path
+    }
+    
+    return matchesSearch && matchesStatus && matchesSource
   })
 
   const handleDocumentSelect = (document: DocumentWithChunkStatus) => {
@@ -179,6 +189,21 @@ export function DocumentSelectorClient({ initialData }: Props) {
                   </SelectContent>
                 </Select>
               </div>
+              
+              <div className="w-full sm:w-48">
+                <label className="text-sm font-medium mb-2 block">Filter by Source</label>
+                <Select value={sourceFilter} onValueChange={(value: any) => setSourceFilter(value)}>
+                  <SelectTrigger>
+                    <FileText className="h-4 w-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    <SelectItem value="uploaded">Uploaded Only</SelectItem>
+                    <SelectItem value="seed">Seed Data Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </Card>
@@ -261,6 +286,12 @@ export function DocumentSelectorClient({ initialData }: Props) {
                               <User className="h-3 w-3" />
                               {document.authorId}
                             </div>
+                            {/* Add source indicator badge */}
+                            {document.file_path && (
+                              <Badge variant="secondary" className="text-xs">
+                                Uploaded
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
