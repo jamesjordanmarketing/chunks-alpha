@@ -55,6 +55,9 @@ interface Document {
   source_type: string;
   created_at: string;
   metadata: { original_filename?: string } | null;
+  doc_version: string | null;
+  source_url: string | null;
+  doc_date: string | null;
 }
 
 interface UploadQueueProps {
