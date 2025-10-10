@@ -1,7 +1,32 @@
-import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
-import { convert as htmlToText } from 'html-to-text';
 import { SupportedFileType } from '../types/upload';
+
+// Use dynamic imports to prevent build-time evaluation
+// This fixes Vercel build issues with pdf-parse test files
+let pdfParse: any;
+let mammoth: any;
+let htmlToText: any;
+
+async function loadPdfParse() {
+  if (!pdfParse) {
+    pdfParse = (await import('pdf-parse')).default;
+  }
+  return pdfParse;
+}
+
+async function loadMammoth() {
+  if (!mammoth) {
+    mammoth = await import('mammoth');
+  }
+  return mammoth;
+}
+
+async function loadHtmlToText() {
+  if (!htmlToText) {
+    const module = await import('html-to-text');
+    htmlToText = module.convert;
+  }
+  return htmlToText;
+}
 
 /**
  * Text extraction error types
@@ -98,7 +123,8 @@ export class TextExtractor {
    */
   private async extractFromPDF(buffer: Buffer, documentId: string): Promise<string> {
     try {
-      const data = await pdfParse(buffer);
+      const pdfParseFunc = await loadPdfParse();
+      const data = await pdfParseFunc(buffer);
       
       if (!data.text || data.text.trim().length === 0) {
         throw new ExtractionError(
@@ -141,7 +167,8 @@ export class TextExtractor {
    */
   private async extractFromDOCX(buffer: Buffer, documentId: string): Promise<string> {
     try {
-      const result = await mammoth.extractRawText({ buffer });
+      const mammothLib = await loadMammoth();
+      const result = await mammothLib.extractRawText({ buffer });
       
       if (!result.value || result.value.trim().length === 0) {
         throw new ExtractionError(
@@ -190,9 +217,10 @@ export class TextExtractor {
   private async extractFromHTML(buffer: Buffer, documentId: string): Promise<string> {
     try {
       const htmlContent = buffer.toString('utf8');
+      const htmlToTextFunc = await loadHtmlToText();
       
       // Convert HTML to plain text with formatting options
-      const text = htmlToText(htmlContent, {
+      const text = htmlToTextFunc(htmlContent, {
         wordwrap: false,
         preserveNewlines: true,
         selectors: [
