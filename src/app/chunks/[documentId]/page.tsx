@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Chunk, ChunkDimensions, PromptTemplate } from '../../../types/chunks';
 import { toast } from 'sonner';
+import { supabase } from '../../../lib/supabase';
 
 interface ChunkWithDimensions extends Chunk {
   dimensions?: ChunkDimensions[];
@@ -46,26 +47,49 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
       try {
         setLoading(true);
         
+        // Get authentication token
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setError('Authentication required');
+          toast.error('Please sign in to view this document');
+          router.push('/signin');
+          return;
+        }
+        
+        const token = session.access_token;
+        const authHeaders = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+        
         // Fetch document
-        const docRes = await fetch(`/api/documents/${params.documentId}`);
+        const docRes = await fetch(`/api/documents/${params.documentId}`, {
+          headers: authHeaders
+        });
         if (!docRes.ok) throw new Error('Failed to fetch document');
         const docData = await docRes.json();
         setDocument(docData.document);
 
         // Fetch chunks
-        const chunksRes = await fetch(`/api/chunks?documentId=${params.documentId}`);
+        const chunksRes = await fetch(`/api/chunks?documentId=${params.documentId}`, {
+          headers: authHeaders
+        });
         if (!chunksRes.ok) throw new Error('Failed to fetch chunks');
         const chunksData = await chunksRes.json();
 
         // Fetch runs
-        const runsRes = await fetch(`/api/chunks/runs?documentId=${params.documentId}`);
+        const runsRes = await fetch(`/api/chunks/runs?documentId=${params.documentId}`, {
+          headers: authHeaders
+        });
         if (!runsRes.ok) throw new Error('Failed to fetch runs');
         const runsData = await runsRes.json();
         setRuns(runsData.runs || []);
 
         // Fetch available templates
         try {
-          const templatesRes = await fetch('/api/chunks/templates');
+          const templatesRes = await fetch('/api/chunks/templates', {
+            headers: authHeaders
+          });
           if (templatesRes.ok) {
             const templatesData = await templatesRes.json();
             setTemplates(templatesData.templates || []);
@@ -78,7 +102,9 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
         const chunksWithDimensions = await Promise.all(
           chunksData.chunks.map(async (chunk: Chunk) => {
             try {
-              const dimRes = await fetch(`/api/chunks/dimensions?chunkId=${chunk.id}`);
+              const dimRes = await fetch(`/api/chunks/dimensions?chunkId=${chunk.id}`, {
+                headers: authHeaders
+              });
               if (dimRes.ok) {
                 const dimData = await dimRes.json();
                 return { ...chunk, dimensions: dimData.dimensions || [] };
@@ -200,9 +226,19 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
       setExtracting(true);
       toast.info('Starting chunk extraction and dimension generation...');
       
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Authentication required');
+        return;
+      }
+      
       const response = await fetch('/api/chunks/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           documentId: params.documentId,
         }),
@@ -232,9 +268,19 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
       setRegenerating(true);
       toast.info('Starting regeneration...');
       
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Authentication required');
+        return;
+      }
+      
       const response = await fetch('/api/chunks/regenerate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           documentId: params.documentId,
           chunkIds: regenAllChunks ? undefined : (selectedChunkForRegen ? [selectedChunkForRegen] : undefined),
