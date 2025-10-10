@@ -94,7 +94,8 @@ export function useDocumentStatus(
   const allDocumentsComplete = useCallback((statusMap: Map<string, DocumentStatus>): boolean => {
     if (statusMap.size === 0) return false;
     
-    for (const status of statusMap.values()) {
+    const statuses = Array.from(statusMap.values());
+    for (const status of statuses) {
       // Continue polling if any document is still processing
       if (status.status === 'uploaded' || status.status === 'processing') {
         return false;
