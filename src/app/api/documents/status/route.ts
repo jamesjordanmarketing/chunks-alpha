@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '../../../../lib/supabase';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 export const maxDuration = 10; // Quick status check
 

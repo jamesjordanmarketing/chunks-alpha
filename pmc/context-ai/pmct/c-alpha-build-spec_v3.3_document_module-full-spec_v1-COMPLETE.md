@@ -4,13 +4,21 @@
 **Date:** October 10, 2025  
 **Status:** ✅ All Prompts Ready
 
+
 ---
 
-## Overview
+## Feature Overview
+
+This implementation specification provides step-by-step directive instructions to build the Document Upload & Processing Module for the Bright Run platform. The module enables users to upload documents (PDF, DOCX, TXT, MD, HTML, RTF), capture metadata, automatically extract text content server-side, track processing status via JavaScript polling, and seamlessly transition into the existing categorization workflow.
+
+---
+
+## Build Overview
 
 This document provides a complete overview of the 6-prompt series for building the Document Upload & Processing Module for the Bright Run LoRA Training Data Platform. Each prompt is self-contained, copy-paste ready, and follows consistent formatting.
 
 ---
+
 
 ## Prompt Series Summary
 

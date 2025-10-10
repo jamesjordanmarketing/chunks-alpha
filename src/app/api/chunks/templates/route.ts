@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promptTemplateService } from '../../../../lib/database';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/chunks/templates
  * 

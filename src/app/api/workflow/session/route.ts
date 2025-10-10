@@ -3,6 +3,9 @@ import { supabase } from '../../../../lib/supabase'
 import { workflowService } from '../../../../lib/database'
 import { createClient } from '@supabase/supabase-js'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 /**
  * Reverse dimension mapping: UUID → frontend key
  */
