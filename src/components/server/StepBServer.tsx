@@ -1,16 +1,50 @@
 import { StepBClient } from '../client/StepBClient'
 import { mockDocuments, primaryCategories as mockCategories } from '../../data/mock-data'
 import { categoryService } from '../../lib/database'
+import { createServerSupabaseClientWithAuth } from '../../lib/supabase-server'
 
 async function getDocument(documentId: string) {
-  await new Promise(resolve => setTimeout(resolve, 100))
+  // First, try to fetch from Supabase
+  const supabase = await createServerSupabaseClientWithAuth()
   
-  const document = mockDocuments.find(doc => doc.id === documentId)
+  const { data: document, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('id', documentId)
+    .single()
+  
+  if (error) {
+    console.error('[StepBServer] Database error:', error)
+    // Fallback to mock data for seed documents
+    const mockDoc = mockDocuments.find(doc => doc.id === documentId)
+    if (mockDoc) {
+      return mockDoc
+    }
+    throw new Error('Document not found')
+  }
+  
   if (!document) {
     throw new Error('Document not found')
   }
   
-  return document
+  // Transform database document to match expected format
+  // Map upload status to workflow status
+  let workflowStatus: 'pending' | 'categorizing' | 'completed' = 'pending';
+  if (document.status === 'categorizing') {
+    workflowStatus = 'categorizing';
+  } else if (document.status === 'completed' && document.workflow_status === 'completed') {
+    workflowStatus = 'completed';
+  }
+  
+  return {
+    id: document.id,
+    title: document.title,
+    content: document.extracted_text || document.content || '',
+    summary: document.summary || '',
+    createdAt: document.created_at,
+    authorId: document.author_id,
+    status: workflowStatus,
+  }
 }
 
 async function getCategories() {
