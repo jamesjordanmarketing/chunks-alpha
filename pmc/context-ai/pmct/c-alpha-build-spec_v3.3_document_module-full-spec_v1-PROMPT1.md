@@ -156,7 +156,7 @@ processing_completed_at | timestamp with time zone    | YES       | NULL
 
 
 
-++++++++++++++++++++++++
+++++++++++++++++++++++++DONEDONEDONEDONEDONEDONE
 
 
 
@@ -194,6 +194,8 @@ Allowed MIME types: (Add each one separately)
 - Status shows as "Private"
 - File size limit shows as "100 MB"
 
+
+----------------DONEDONEDONEDONEDONE
 ### Step 2B: Configure Storage Policies
 
 **DIRECTIVE:** You shall create Row Level Security policies that allow authenticated users to manage only their own documents.
@@ -287,7 +289,7 @@ This structure ensures:
 
 
 
-++++++++++++++++++++++++
++++++++++++DONEDONEDONEDONE+++++++++++++
 
 
 
@@ -611,9 +613,7 @@ export function sanitizeFilename(filename: string): string {
 
 
 
-++++++++++++++++++++++++
-
-
+++++++++DONEDONEDONEDONEDONEDONE++++++++++++++++
 
 ## STEP 5: Create Upload API Endpoint
 
@@ -904,7 +904,7 @@ Expected response:
 
 
 
-++++++++++++++++++++++++
++++++DONEDONEDONEDONEDONEDONE+++++++++++++++++++
 
 
 

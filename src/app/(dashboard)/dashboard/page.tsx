@@ -2,9 +2,12 @@
 
 import { useAuth } from '../../../lib/auth-context'
 import { DocumentSelectorServer } from '../../../components/server/DocumentSelectorServer'
+import { useRouter } from 'next/navigation'
+import { Upload } from 'lucide-react'
 
 export default function DashboardPage() {
   const { user, profile, signOut, isLoading } = useAuth()
+  const router = useRouter()
 
   if (isLoading) {
     return (
@@ -44,6 +47,13 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">{user.email}</span>
+              <button
+                onClick={() => router.push('/upload')}
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Documents
+              </button>
               <button
                 onClick={() => signOut()}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"

@@ -38,12 +38,6 @@ You are implementing Phase 3 of the document upload module for "Bright Run." In 
 
 ---
 
-
-
-====================
-
-
-
 ## STEP 1: Create Text Extractor Service
 
 **DIRECTIVE:** You shall create a service that extracts plain text from various file formats using the NPM packages installed in Prompt 1.
@@ -428,11 +422,6 @@ export const textExtractor = new TextExtractor();
 2. All imports resolve correctly (pdf-parse, mammoth, html-to-text)
 
 
-
-++++++++++++++++++++++++
-
-
-
 ## STEP 2: Create Document Processor
 
 **DIRECTIVE:** You shall create an orchestrator service that manages the complete document processing workflow: fetching from storage, extracting text, updating database.
@@ -682,10 +671,6 @@ export const documentProcessor = new DocumentProcessor();
 **Verification:**
 1. File compiles with no TypeScript errors
 2. Imports resolve correctly
-
-
-
-++++++++++++++++++++++++
 
 
 
@@ -940,11 +925,6 @@ export async function PUT(request: NextRequest) {
 2. Endpoint will be available at: `POST /api/documents/process`
 
 
-
-++++++++++++++++++++++++
-
-
-
 ## STEP 4: Test Text Extraction
 
 **DIRECTIVE:** You shall test the complete text extraction workflow to verify all components work together.
@@ -1048,9 +1028,6 @@ export async function PUT(request: NextRequest) {
    - Check console logs for retry messages
    - If file still empty, should error again (expected)
 
-
-
-++++++++++++++++++++++++
 
 
 
