@@ -23,12 +23,12 @@ import {
   Info
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getWorkflowReadyDocuments, getWorkflowUrl } from '../../lib/workflow-navigation';
+import { getWorkflowReadyDocuments, getWorkflowUrl, WorkflowStatus } from '../../lib/workflow-navigation';
 
 interface Document {
   id: string;
   title: string;
-  status: string;
+  status: WorkflowStatus;
 }
 
 interface BulkWorkflowActionsProps {
@@ -125,7 +125,7 @@ export function BulkWorkflowActions({
     });
 
     // Navigate to first document
-    const url = getWorkflowUrl(firstDoc.id, firstDoc.status as any);
+    const url = getWorkflowUrl(firstDoc.id, firstDoc.status);
     router.push(url);
   };
 

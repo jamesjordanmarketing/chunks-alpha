@@ -314,7 +314,7 @@ export function UploadQueue({ autoRefresh = true }: UploadQueueProps) {
    * Start workflow for document
    */
   const handleStartWorkflow = (doc: Document) => {
-    const workflowUrl = getWorkflowUrl(doc.id, doc.status as any);
+    const workflowUrl = getWorkflowUrl(doc.id, doc.status);
     router.push(workflowUrl);
   };
 
@@ -571,10 +571,10 @@ export function UploadQueue({ autoRefresh = true }: UploadQueueProps) {
                               </DropdownMenuItem>
                               
                               {/* Add Start Workflow option for ready documents */}
-                              {isReadyForWorkflow(doc.status as any) && (
+                              {isReadyForWorkflow(doc.status) && (
                                 <DropdownMenuItem onClick={() => handleStartWorkflow(doc)}>
                                   <FileText className="w-4 h-4 mr-2" />
-                                  {getNextActionLabel(doc.status as any)}
+                                  {getNextActionLabel(doc.status)}
                                 </DropdownMenuItem>
                               )}
                               
