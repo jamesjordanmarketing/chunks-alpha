@@ -165,18 +165,25 @@ This indicates the `ensureArray()` helper function is working correctly (code wa
    - Example: "How to Set Up Email Marketing"
    - Example: "Step-by-Step Guide to Configure API"
 
-2. **Categorization (Step B):**
-   - Select: **"Operational Playbook / Step-by-Step (Author: BRAND)"**
-   - OR: **"Proprietary Strategy/Method (Author: BRAND)"** (if contains procedures)
+2. **Statement of Belonging (Step A):**
+   - Select: **"4/5 - Strong relationship"** (Clearly represents my expertise and unique insights)
+   - OR: **"5/5 - Perfect fit"** (Perfectly captures my voice, knowledge, and expertise)
+   - This ensures high training priority for instructional content
 
-3. **Tags (Step C):**
-   - Format tag: "Procedural"
-   - OR: Format tag: "How-to Guide"
+3. **Primary Category (Step B):**
+   - Select: **"Process Documentation & Workflows"** (Step-by-step processes, standard operating procedures, and workflow documentation)
+   - OR: **"Complete Systems & Methodologies"** (End-to-end business systems, frameworks, or methodologies that provide comprehensive solutions)
+   - These categories are optimized for instructional content processing
 
-4. **Chunk Extraction:**
+4. **Secondary Tags (Step C):**
+   - **Content Format:** Select **"How-to Guide"** (Step-by-step instructional content)
+   - **Intended Use:** Select **"Training"** (Employee and customer education) and/or **"Delivery/Operations"** (Service delivery and operational excellence)
+   - **Disclosure Risk:** Select **"Level 1 - Minimal Risk"** or **"Level 2 - Low Risk"** for broader training applicability
+
+5. **Chunk Extraction:**
    - System should automatically classify chunks with step-by-step instructions as `Instructional_Unit`
 
-5. **Generate Dimensions:**
+6. **Generate Dimensions:**
    - Run dimension generation
    - Task extraction prompt will execute
    - Check for: task_name, preconditions, inputs, steps_json, expected_output, warnings_failure_modes

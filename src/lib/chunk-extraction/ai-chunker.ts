@@ -163,10 +163,21 @@ Return ONLY valid JSON array, no markdown, no other text.`;
 
   private parseExtractionResponse(response: string, fullContent: string): ExtractionCandidate[] {
     try {
-      // Extract JSON from response (in case AI added extra text)
-      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      // Extract JSON from response (handles both bare JSON and markdown-wrapped JSON)
+      let jsonText = response;
+
+      // Check if response is wrapped in markdown code fences
+      const markdownMatch = response.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+      if (markdownMatch) {
+        console.log('Detected markdown-wrapped JSON, extracting...');
+        jsonText = markdownMatch[1].trim();
+      }
+
+      // Now find the JSON array
+      const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
         console.error('No JSON array found in AI response');
+        console.error('Response was:', response.substring(0, 500));
         throw new Error('No JSON array found in response');
       }
 
