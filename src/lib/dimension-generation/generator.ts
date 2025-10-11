@@ -389,15 +389,22 @@ export class DimensionGenerator {
    * Map AI response to dimension fields
    */
   private mapResponseToDimensions(response: any, templateType: string): Partial<ChunkDimensions> {
+    // Helper function to convert arrays to strings with specified delimiter
+    const arrayToString = (value: any, delimiter: string = ', '): string | undefined => {
+      if (value === null || value === undefined) return undefined;
+      if (Array.isArray(value)) return value.join(delimiter);
+      return value;
+    };
+
     const mapping: Record<string, Partial<ChunkDimensions>> = {
       'content_analysis': {
         chunk_summary_1s: response.chunk_summary_1s,
-        key_terms: response.key_terms,
+        key_terms: arrayToString(response.key_terms, '|'),
         audience: response.audience,
         intent: response.intent,
-        tone_voice_tags: response.tone_voice_tags,
-        brand_persona_tags: response.brand_persona_tags,
-        domain_tags: response.domain_tags,
+        tone_voice_tags: arrayToString(response.tone_voice_tags),
+        brand_persona_tags: arrayToString(response.brand_persona_tags),
+        domain_tags: arrayToString(response.domain_tags),
       },
       'task_extraction': {
         task_name: response.task_name,
@@ -409,9 +416,9 @@ export class DimensionGenerator {
       },
       'cer_analysis': {
         claim: response.claim,
-        evidence_snippets: response.evidence_snippets,
+        evidence_snippets: arrayToString(response.evidence_snippets, '|'),
         reasoning_sketch: response.reasoning_sketch,
-        citations: response.citations,
+        citations: arrayToString(response.citations),
         factual_confidence_0_1: response.factual_confidence_0_1,
       },
       'scenario_extraction': {
@@ -427,12 +434,12 @@ export class DimensionGenerator {
         style_directives: response.style_directives,
       },
       'risk_assessment': {
-        safety_tags: response.safety_tags,
+        safety_tags: arrayToString(response.safety_tags),
         coverage_tag: response.coverage_tag,
         novelty_tag: response.novelty_tag,
         ip_sensitivity: response.ip_sensitivity,
         pii_flag: response.pii_flag,
-        compliance_flags: response.compliance_flags,
+        compliance_flags: arrayToString(response.compliance_flags),
       },
     };
 

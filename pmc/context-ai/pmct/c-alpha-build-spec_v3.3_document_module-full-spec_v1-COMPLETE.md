@@ -23,7 +23,7 @@ This document provides a complete overview of the 6-prompt series for building t
 ## Prompt Series Summary
 
 ### 📦 PROMPT 1: Database Setup + Core Infrastructure
-**File:** `c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT1.md`  
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT1.md`  
 **Estimated Time:** 2-3 hours  
 **Status:** ✅ Complete
 
@@ -43,7 +43,7 @@ This document provides a complete overview of the 6-prompt series for building t
 ---
 
 ### 🎨 PROMPT 2: Upload UI Components
-**File:** `c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT2.md`  
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT2.md`  
 **Estimated Time:** 3-4 hours  
 **Status:** ✅ Complete
 
@@ -62,7 +62,7 @@ This document provides a complete overview of the 6-prompt series for building t
 ---
 
 ### ⚙️ PROMPT 3: Text Extraction & Processing
-**File:** `c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT3.md`  
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT3.md`  
 **Estimated Time:** 4-5 hours  
 **Status:** ✅ Complete
 
@@ -81,7 +81,7 @@ This document provides a complete overview of the 6-prompt series for building t
 ---
 
 ### 📊 PROMPT 4: Status Polling & Queue Management
-**File:** `c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT4.md`  
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT4.md`  
 **Estimated Time:** 4-5 hours  
 **Status:** ✅ Complete
 
@@ -103,7 +103,7 @@ This document provides a complete overview of the 6-prompt series for building t
 ---
 
 ### ✏️ PROMPT 5: Metadata & Preview Features
-**File:** `c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT5.md`  
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT5.md`  
 **Estimated Time:** 3-4 hours  
 **Status:** ✅ Complete
 
@@ -122,7 +122,7 @@ This document provides a complete overview of the 6-prompt series for building t
 ---
 
 ### 🔗 PROMPT 6: Workflow Integration & Testing
-**File:** `c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT6.md`  
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build-spec_v3.3_document_module-full-spec_v1-PROMPT6.md`  
 **Estimated Time:** 3-4 hours  
 **Status:** ✅ Complete
 
