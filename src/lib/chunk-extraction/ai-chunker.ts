@@ -163,25 +163,35 @@ Return ONLY valid JSON array, no markdown, no other text.`;
 
   private parseExtractionResponse(response: string, fullContent: string): ExtractionCandidate[] {
     try {
+      console.log('🔍 [AI Chunker] Starting to parse AI response...');
+      console.log('📝 [AI Chunker] Response length:', response.length);
+      console.log('📝 [AI Chunker] Response preview:', response.substring(0, 200));
+      
       // Extract JSON from response (handles both bare JSON and markdown-wrapped JSON)
-      let jsonText = response;
+      let jsonText = response.trim();
 
       // Check if response is wrapped in markdown code fences
       const markdownMatch = response.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
       if (markdownMatch) {
-        console.log('Detected markdown-wrapped JSON, extracting...');
+        console.log('✅ [AI Chunker] Detected markdown-wrapped JSON, extracting...');
         jsonText = markdownMatch[1].trim();
+        console.log('📝 [AI Chunker] Extracted JSON length:', jsonText.length);
+      } else {
+        console.log('ℹ️ [AI Chunker] No markdown wrapping detected, using raw response');
       }
 
       // Now find the JSON array
       const jsonMatch = jsonText.match(/\[[\s\S]*\]/);
       if (!jsonMatch) {
-        console.error('No JSON array found in AI response');
-        console.error('Response was:', response.substring(0, 500));
+        console.error('❌ [AI Chunker] No JSON array found in AI response');
+        console.error('❌ [AI Chunker] Full response:', response);
+        console.error('❌ [AI Chunker] Processed jsonText:', jsonText);
         throw new Error('No JSON array found in response');
       }
 
+      console.log('✅ [AI Chunker] Found JSON array, length:', jsonMatch[0].length);
       const parsed = JSON.parse(jsonMatch[0]);
+      console.log(`✅ [AI Chunker] Successfully parsed ${parsed.length} chunk candidates`);
       
       // Split content into lines for line-based indexing
       const lines = fullContent.split('\n');

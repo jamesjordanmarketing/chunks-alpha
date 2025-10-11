@@ -275,7 +275,83 @@ export function UploadQueue({ autoRefresh = true }: UploadQueueProps) {
 
       toast.loading('Deleting document...', { id: 'delete' });
 
-      // Delete from storage
+      // Step 1: Delete workflow sessions first (foreign key constraint)
+      const { error: workflowError } = await supabase
+        .from('workflow_sessions')
+        .delete()
+        .eq('document_id', documentId)
+        .eq('user_id', session.user.id);
+
+      if (workflowError) {
+        console.error('Workflow sessions delete error:', workflowError);
+        throw new Error(`Failed to delete workflow sessions: ${workflowError.message}`);
+      }
+
+      // Step 2: Delete document categories (if they exist)
+      const { error: categoriesError } = await supabase
+        .from('document_categories')
+        .delete()
+        .eq('document_id', documentId);
+
+      if (categoriesError) {
+        console.error('Document categories delete error:', categoriesError);
+        // Continue - this table might not have records
+      }
+
+      // Step 3: Delete document tags (if they exist)
+      const { error: tagsError } = await supabase
+        .from('document_tags')
+        .delete()
+        .eq('document_id', documentId);
+
+      if (tagsError) {
+        console.error('Document tags delete error:', tagsError);
+        // Continue - this table might not have records
+      }
+
+      // Step 4: Delete chunks and their dimensions (if they exist)
+      // First get all chunks for this document
+      const { data: chunks } = await supabase
+        .from('chunks')
+        .select('id')
+        .eq('document_id', documentId);
+
+      if (chunks && chunks.length > 0) {
+        const chunkIds = chunks.map(c => c.id);
+        
+        // Delete chunk dimensions
+        const { error: dimensionsError } = await supabase
+          .from('chunk_dimensions')
+          .delete()
+          .in('chunk_id', chunkIds);
+
+        if (dimensionsError) {
+          console.error('Chunk dimensions delete error:', dimensionsError);
+        }
+
+        // Delete chunks
+        const { error: chunksError } = await supabase
+          .from('chunks')
+          .delete()
+          .eq('document_id', documentId);
+
+        if (chunksError) {
+          console.error('Chunks delete error:', chunksError);
+        }
+      }
+
+      // Step 5: Delete chunk extraction jobs (if they exist)
+      const { error: jobsError } = await supabase
+        .from('chunk_extraction_jobs')
+        .delete()
+        .eq('document_id', documentId);
+
+      if (jobsError) {
+        console.error('Chunk extraction jobs delete error:', jobsError);
+        // Continue - this is not critical
+      }
+
+      // Step 6: Delete from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
         .remove([filePath]);
@@ -285,7 +361,7 @@ export function UploadQueue({ autoRefresh = true }: UploadQueueProps) {
         // Continue anyway - database delete is more important
       }
 
-      // Delete from database
+      // Step 7: Finally delete the document record
       const { error: dbError } = await supabase
         .from('documents')
         .delete()
@@ -296,7 +372,7 @@ export function UploadQueue({ autoRefresh = true }: UploadQueueProps) {
         throw new Error(dbError.message);
       }
 
-      toast.success('Document deleted', { id: 'delete' });
+      toast.success('Document and all related data deleted', { id: 'delete' });
       await fetchDocuments();
     } catch (error) {
       toast.error('Delete failed', {
