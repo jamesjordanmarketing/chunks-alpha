@@ -29,6 +29,12 @@ export class AIChunker {
     console.log(`Document length: ${documentContent.length} characters`);
     console.log(`Category: ${primaryCategory}`);
 
+    // Check document size - Claude has context limits
+    if (documentContent.length > 150000) {
+      console.warn(`⚠️ Document is very large (${documentContent.length} chars). This may cause timeouts.`);
+      console.warn(`⚠️ Consider splitting the document or increasing function timeout.`);
+    }
+
     // First, detect document structure
     const structure = this.analyzer.detectStructure(documentContent);
     console.log(`Detected ${structure.sections.length} sections, ${structure.totalTokens} tokens`);
@@ -36,15 +42,33 @@ export class AIChunker {
     // Call AI to identify chunk candidates
     const prompt = this.buildExtractionPrompt(documentTitle, documentContent, primaryCategory, structure);
 
-    const message = await this.client.messages.create({
-      model: AI_CONFIG.model,
-      max_tokens: AI_CONFIG.maxTokens,
-      temperature: 0.3,  // Lower temperature for more consistent extraction
-      messages: [{
-        role: 'user',
-        content: prompt,
-      }],
-    });
+    console.log(`📤 [AI Chunker] Sending request to Claude API...`);
+    console.log(`📤 [AI Chunker] Prompt length: ${prompt.length} characters`);
+    
+    let message;
+    try {
+      // Add timeout wrapper for AI call
+      const timeoutMs = 240000; // 4 minutes (slightly less than function timeout)
+      message = await Promise.race([
+        this.client.messages.create({
+          model: AI_CONFIG.model,
+          max_tokens: AI_CONFIG.maxTokens,
+          temperature: 0.3,  // Lower temperature for more consistent extraction
+          messages: [{
+            role: 'user',
+            content: prompt,
+          }],
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('AI API call timed out after 4 minutes')), timeoutMs)
+        )
+      ]) as Anthropic.Messages.Message;
+      
+      console.log(`✅ [AI Chunker] Received response from Claude API`);
+    } catch (error) {
+      console.error(`❌ [AI Chunker] AI API call failed:`, error);
+      throw new Error(`AI extraction failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 
     // Parse AI response
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
@@ -70,12 +94,24 @@ export class AIChunker {
     // Split content into lines for better boundary detection
     const lines = content.split('\n');
     
+    // For large documents (>80KB), truncate to prevent timeouts
+    let documentContent = content;
+    let truncated = false;
+    const maxChars = 80000; // ~20K tokens
+    
+    if (content.length > maxChars) {
+      console.warn(`⚠️ [AI Chunker] Document too large (${content.length} chars), truncating to ${maxChars} chars`);
+      documentContent = content.substring(0, maxChars) + '\n\n[... Document truncated due to size limits ...]';
+      truncated = true;
+    }
+    
     return `You are a document analysis expert. Your task is to identify and extract distinct chunks from a document for LoRA training data creation.
 
 DOCUMENT TITLE: ${title}
 DOCUMENT CATEGORY: ${category}
 DOCUMENT LENGTH: ${structure.totalChars} characters, ${structure.totalTokens} tokens, ${lines.length} lines
 SECTIONS DETECTED: ${structure.sections.length}
+${truncated ? 'NOTE: Document was truncated for analysis. Focus on visible content.' : ''}
 
 CHUNK TYPES TO IDENTIFY:
 
@@ -99,7 +135,7 @@ IMPORTANT: The document has ${lines.length} lines total. Use LINE NUMBERS for pr
 
 DOCUMENT CONTENT:
 ---
-${content}
+${documentContent}
 ---
 
 TASK: Analyze this COMPLETE document and identify ALL candidate chunks. 
