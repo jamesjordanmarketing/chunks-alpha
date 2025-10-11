@@ -37,12 +37,12 @@ export type ChunkDimensions = {
   
   // Content dimensions
   chunk_summary_1s: string | null;
-  key_terms: string | null;  // Stored as pipe-delimited string: "term1|term2|term3"
+  key_terms: string[] | null;
   audience: string | null;
   intent: string | null;
-  tone_voice_tags: string | null;  // Stored as comma-delimited string: "tag1, tag2, tag3"
-  brand_persona_tags: string | null;  // Stored as comma-delimited string
-  domain_tags: string | null;  // Stored as comma-delimited string
+  tone_voice_tags: string[] | null;
+  brand_persona_tags: string[] | null;
+  domain_tags: string[] | null;
   
   // Task dimensions
   task_name: string | null;
@@ -54,9 +54,9 @@ export type ChunkDimensions = {
   
   // CER dimensions
   claim: string | null;
-  evidence_snippets: string | null;  // Stored as pipe-delimited string
+  evidence_snippets: string[] | null;
   reasoning_sketch: string | null;
-  citations: string | null;  // Stored as comma-delimited string
+  citations: string[] | null;
   factual_confidence_0_1: number | null;
   
   // Scenario dimensions
@@ -72,12 +72,12 @@ export type ChunkDimensions = {
   style_directives: string | null;
   
   // Risk dimensions
-  safety_tags: string | null;  // Stored as comma-delimited string
+  safety_tags: string[] | null;
   coverage_tag: string | null;
   novelty_tag: string | null;
   ip_sensitivity: string | null;
   pii_flag: boolean;
-  compliance_flags: string | null;  // Stored as comma-delimited string
+  compliance_flags: string[] | null;
   
   // Training metadata
   embedding_id: string | null;
