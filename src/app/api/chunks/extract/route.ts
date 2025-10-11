@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ChunkExtractor } from '../../../../lib/chunk-extraction/extractor';
 import { DimensionGenerator } from '../../../../lib/dimension-generation/generator';
-import { chunkExtractionJobService } from '../../../../lib/database';
+import { chunkExtractionJobService, chunkService } from '../../../../lib/database';
 import { createServerSupabaseClient } from '../../../../lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { documentId } = await request.json();
+    const { documentId, forceReExtract } = await request.json();
 
     if (!documentId) {
       return NextResponse.json(
@@ -33,6 +33,39 @@ export async function POST(request: NextRequest) {
     // Get current user (optional - will use null if not authenticated)
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id || null;
+
+    // NEW: Check if chunks already exist
+    const existingChunkCount = await chunkService.getChunkCount(documentId);
+    
+    if (existingChunkCount > 0 && forceReExtract !== true) {
+      // Chunks already exist and forceReExtract not set
+      return NextResponse.json(
+        { 
+          error: 'Chunks already exist for this document',
+          existingChunks: existingChunkCount,
+          hint: 'Set forceReExtract=true to delete existing chunks and re-extract'
+        },
+        { status: 400 }
+      );
+    }
+
+    // NEW: If forceReExtract is true, delete all existing chunks and dimensions
+    if (forceReExtract === true && existingChunkCount > 0) {
+      console.log(`🗑️ Deleting ${existingChunkCount} existing chunks for document ${documentId}`);
+      
+      // Delete all chunk_dimensions first (foreign key constraint)
+      const chunks = await chunkService.getChunksByDocument(documentId);
+      for (const chunk of chunks) {
+        await supabase
+          .from('chunk_dimensions')
+          .delete()
+          .eq('chunk_id', chunk.id);
+      }
+      
+      // Delete all chunks
+      await chunkService.deleteChunksByDocument(documentId);
+      console.log(`✅ Deleted all chunks and dimensions for document ${documentId}`);
+    }
 
     // Start extraction
     const extractor = new ChunkExtractor();
@@ -69,6 +102,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       chunksExtracted: chunks.length,
+      reExtracted: forceReExtract === true,
       runId,
       chunks,
     });

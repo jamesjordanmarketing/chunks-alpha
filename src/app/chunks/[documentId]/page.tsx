@@ -214,11 +214,73 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
     setRegenerateModalOpen(true);
   };
 
-  const handleRegenerateAll = () => {
+  // Handler for Button 1: Regenerate Dimensions Only (existing chunks)
+  const handleRegenerateDimensionsOnly = () => {
     setSelectedChunkForRegen(null);
-    setRegenAllChunks(true);
+    setRegenAllChunks(true);  // All chunks, but existing chunks only
     setSelectedTemplates([]);
     setRegenerateModalOpen(true);
+  };
+
+  // Handler for Button 2: Re-Extract & Regenerate All (fresh chunks)
+  const handleReExtractAndRegenerate = async () => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `⚠️ WARNING: This will DELETE all ${totalChunks} existing chunks and their dimension history for this document.\n\n` +
+      `A fresh extraction will create new chunks from the document content, and dimension generation will run on the new chunks.\n\n` +
+      `This action cannot be undone. Do you want to proceed?`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      setExtracting(true);
+      toast.info('Deleting existing chunks and re-extracting from document...');
+      
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Authentication required');
+        return;
+      }
+      
+      // Call the extract API (which will delete existing chunks, extract new ones, and generate dimensions)
+      const response = await fetch('/api/chunks/extract', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          documentId: params.documentId,
+          forceReExtract: true,  // NEW: Forces deletion and re-extraction
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Re-extraction failed');
+      }
+
+      const result = await response.json();
+      toast.success(
+        `Successfully re-extracted ${result.chunksExtracted} chunks and generated dimensions!`
+      );
+      
+      // Reload the page to show new chunks
+      window.location.reload();
+      
+    } catch (error: any) {
+      console.error('Re-extraction error:', error);
+      toast.error(error.message || 'Failed to re-extract chunks');
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  // Keep this for backwards compatibility with individual chunk regeneration
+  const handleRegenerateAll = () => {
+    handleRegenerateDimensionsOnly();
   };
 
   const handleStartExtraction = async () => {
@@ -355,15 +417,31 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
               {chunksWithDimensions} / {totalChunks} Analyzed
             </Badge>
             {totalChunks > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRegenerateAll}
-                disabled={regenerating}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
-                Regenerate All
-              </Button>
+              <>
+                {/* Button 1: Regenerate Dimensions Only */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerateDimensionsOnly}
+                  disabled={regenerating || extracting}
+                  title="Re-run AI dimension generation for existing chunks"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${regenerating ? 'animate-spin' : ''}`} />
+                  Regenerate Dimensions
+                </Button>
+                {/* Button 2: Re-Extract & Regenerate All */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReExtractAndRegenerate}
+                  disabled={regenerating || extracting}
+                  title="Delete chunks, re-extract from document, and generate new dimensions"
+                  className="border-orange-500 text-orange-700 hover:bg-orange-50"
+                >
+                  <Grid3x3 className={`h-4 w-4 mr-2 ${extracting ? 'animate-spin' : ''}`} />
+                  Re-Extract & Regenerate
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -591,8 +669,8 @@ export default function ChunkDashboardPage({ params }: { params: { documentId: s
             <DialogTitle>Regenerate Dimensions</DialogTitle>
             <DialogDescription>
               {regenAllChunks 
-                ? `Regenerate dimensions for all ${totalChunks} chunks in this document`
-                : 'Regenerate dimensions for selected chunk'}
+                ? `This will regenerate dimensions for all ${totalChunks} existing chunks using AI analysis. The chunks themselves will not be modified.`
+                : 'This will regenerate dimensions for the selected chunk using AI analysis.'}
             </DialogDescription>
           </DialogHeader>
 

@@ -16,15 +16,15 @@ This specification provides step-by-step instructions for implementing enhanced 
 
 ### Step 1: Review Current State
 
-Before starting implementation, review the current chunks dashboard at `/chunks/[documentId]` to understand:
+Before starting implementation, review the current chunks dashboard at `\chunks\[documentId]` to understand:
 - Existing "Regenerate All" button functionality
 - Modal with template selection
 - Run versioning system
 
 **Current Files:**
-- `src/app/chunks/[documentId]/page.tsx` - Main dashboard component
-- `src/app/api/chunks/extract/route.ts` - Chunk extraction API
-- `src/app/api/chunks/regenerate/route.ts` - Dimension regeneration API (no changes needed)
+- `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\chunks\[documentId]\page.tsx` - Main dashboard component
+- `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\api\chunks\extract\route.ts` - Chunk extraction API
+- `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\api\chunks\regenerate\route.ts` - Dimension regeneration API (no changes needed)
 
 ### Step 2: Execute Implementation Prompt
 
@@ -54,14 +54,14 @@ Currently, there is one "Regenerate All" button that regenerates dimensions for 
 
 ## CURRENT FILE LOCATIONS
 
-1. **Chunks Dashboard Page:** `src/app/chunks/[documentId]/page.tsx`
-2. **Extract API Route:** `src/app/api/chunks/extract/route.ts`
+1. **Chunks Dashboard Page:** `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\chunks\[documentId]\page.tsx`
+2. **Extract API Route:** `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\api\chunks\extract\route.ts`
 
 ## REQUIRED CHANGES
 
 ### Change 1: Add Two Distinct Buttons to Dashboard
 
-**Location:** `src/app/chunks/[documentId]/page.tsx`
+**Location:** `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\chunks\[documentId]\page.tsx`
 
 **Current Button Section (around line 130-145):**
 ```typescript
@@ -122,7 +122,7 @@ Currently, there is one "Regenerate All" button that regenerates dimensions for 
 
 ### Change 2: Add New Handler Functions
 
-**Location:** `src/app/chunks/[documentId]/page.tsx`
+**Location:** `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\chunks\[documentId]\page.tsx`
 
 Find the existing `handleRegenerateAll` function (around line 200-210) and **replace it** with these three handler functions:
 
@@ -158,7 +158,7 @@ const handleReExtractAndRegenerate = async () => {
     }
     
     // Call the extract API (which will delete existing chunks, extract new ones, and generate dimensions)
-    const response = await fetch('/api/chunks/extract', {
+    const response = await fetch('\api\chunks\extract', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -199,7 +199,7 @@ const handleRegenerateAll = () => {
 
 ### Change 3: Update Modal Description
 
-**Location:** `src/app/chunks/[documentId]/page.tsx`
+**Location:** `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\chunks\[documentId]\page.tsx`
 
 Find the `DialogDescription` in the regeneration modal (around line 350-355) and replace it with:
 
@@ -213,7 +213,7 @@ Find the `DialogDescription` in the regeneration modal (around line 350-355) and
 
 ### Change 4: Modify Extract API to Support Force Re-Extraction
 
-**Location:** `src/app/api/chunks/extract/route.ts`
+**Location:** `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\api\chunks\extract\route.ts`
 
 Replace the entire POST function with this updated version:
 
@@ -336,12 +336,12 @@ export async function POST(request: NextRequest) {
 
 Execute these changes in the following order:
 
-1. **Update `src/app/chunks/[documentId]/page.tsx`:**
+1. **Update `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\chunks\[documentId]\page.tsx`:**
    - Replace the button section as shown in Change 1
    - Replace/add the handler functions as shown in Change 2
    - Update the modal description as shown in Change 3
 
-2. **Update `src/app/api/chunks/extract/route.ts`:**
+2. **Update `C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\api\chunks\extract\route.ts`:**
    - Replace the entire POST function as shown in Change 4
 
 3. **Verify imports are present:**
@@ -434,7 +434,7 @@ After running the implementation prompt:
    ```
 
 3. **Navigate to a document with chunks:**
-   - Go to `http://localhost:3000/chunks/[any-document-id]`
+   - Go to `http://localhost:3000/chunks\[any-document-id]`
    - Verify both buttons appear
    - Test both workflows
 
@@ -451,8 +451,8 @@ If you need to revert changes:
 
 1. **Git reset (if using version control):**
    ```bash
-   git checkout src/app/chunks/[documentId]/page.tsx
-   git checkout src/app/api/chunks/extract/route.ts
+   git checkout C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\chunks\[documentId]\page.tsx
+   git checkout C:\Users\james\Master\BrightHub\BRun\chunks-alpha\src\app\api\chunks\extract\route.ts
    ```
 
 2. **Manual rollback:**
