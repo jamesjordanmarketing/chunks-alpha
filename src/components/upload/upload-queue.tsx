@@ -505,14 +505,21 @@ export function UploadQueue({ autoRefresh = true }: UploadQueueProps) {
 
                         {/* Progress Bar */}
                         <TableCell>
-                          {(doc.status === 'processing' || doc.status === 'uploaded') && (
-                            <div className="w-24">
-                              <Progress value={doc.processing_progress} className="h-2" />
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {doc.processing_progress}%
-                              </p>
-                            </div>
-                          )}
+                          {(doc.status === 'processing' || doc.status === 'uploaded') && (() => {
+                            const uploadedAt = new Date(doc.created_at).getTime();
+                            const now = Date.now();
+                            const minutesStuck = Math.floor((now - uploadedAt) / 60000);
+                            const isStuck = doc.status === 'uploaded' && minutesStuck > 2;
+
+                            return (
+                              <div className="w-24">
+                                <Progress value={doc.processing_progress} className="h-2" />
+                                <p className={`text-xs mt-1 ${isStuck ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-muted-foreground'}`}>
+                                  {isStuck ? `Stuck ${minutesStuck}m` : `${doc.processing_progress}%`}
+                                </p>
+                              </div>
+                            );
+                          })()}
                           {doc.status === 'completed' && (
                             <span className="text-sm text-green-600 dark:text-green-400">
                               ✓ Done
@@ -605,6 +612,20 @@ export function UploadQueue({ autoRefresh = true }: UploadQueueProps) {
                                     Retry Processing
                                   </DropdownMenuItem>
                                 </>
+                              )}
+
+                              {/* Add retry option for stuck "uploaded" documents */}
+                              {doc.status === 'uploaded' && (() => {
+                                const uploadedAt = new Date(doc.created_at).getTime();
+                                const now = Date.now();
+                                const minutesStuck = Math.floor((now - uploadedAt) / 60000);
+                                // If stuck for more than 2 minutes, show retry option
+                                return minutesStuck > 2;
+                              })() && (
+                                <DropdownMenuItem onClick={() => handleRetry(doc.id)}>
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  Start Processing (Stuck)
+                                </DropdownMenuItem>
                               )}
                               
                               <DropdownMenuItem 

@@ -85,6 +85,15 @@ function classifyError(errorMessage: string): {
     };
   }
 
+  if (msg.includes('failed to start text extraction') || msg.includes('processing service unreachable')) {
+    return {
+      type: 'Processing Trigger Failed',
+      category: 'system',
+      recoverable: true,
+      suggestedAction: 'Retry processing from the dashboard'
+    };
+  }
+
   if (msg.includes('server error') || msg.includes('failed to')) {
     return {
       type: 'Server Error',
@@ -255,6 +264,9 @@ Please provide details about the issue:
                   <li>Temporary server issue or high load</li>
                   <li>Network connection interrupted during processing</li>
                   <li>File size may be too large for processing</li>
+                  {errorMessage?.includes('start text extraction') && (
+                    <li>Background processing trigger failed (retryable)</li>
+                  )}
                 </>
               )}
             </ul>
