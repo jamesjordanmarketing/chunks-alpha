@@ -1,6 +1,6 @@
 =========================Prompt=For=Building=Context=========================================
 You are tasked with updating the context carryover file at:
-**@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md**
+`C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md`
 
 First, read the entire file to understand its current structure and content.
 
@@ -10,30 +10,26 @@ Then, update the "Current Focus" section with the following requirements:
    - Be explicit about the task
    - Include full paths where applicable
 
-Your task is to update: **@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md** with the details of what I am requesting below:
+Your task is to update: `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md` with the details of what I am requesting below:
 
 ok we have uploaded this version of the app and built it in Vercel. 
 
 We are writing a carry over document and specification for the next chat window.
-We have accomplished the current codebase in **@C:\Users\james\Master\BrightHub\brun\chunks-alpha\src** which is working well.
+We have accomplished the current codebase in `C:\Users\james\Master\BrightHub\brun\chunks-alpha\src` which is working well.
 
-We have discovered that:
-the dimensions are still not being populated. We have tried two fixes and neither fixed it.
+The dimensions issue is fixed, and they are now being generated and are populating the front end.
 
-Also we cannot delete documents from the Upload page. It is giving us this error:
-`
-update or delete on table "documents" violates foreign
-"workflow_sessions_document_id_fkey" on table "workflow_sessions"`
+We have discovered that the instructional unit chunk is processing the correct prompt. The one thing wrong though is the value being stored in steps_json is this: `[object Object], [object Object], [object Object], [object Object], [object Object]` which is not related to anything in the content file, and is obviously a data value bug (another doc did it too).
 
 We need to fix it.
-In addition we have a wireframe design that we must use. You can see the wireframe codebase here: **@C:\Users\james\Master\BrightHub\brun\chunks-alpha\src**
-This will be the UI of the document components
+You can see the full codebase here: wireframe codebase here: `C:\Users\james\Master\BrightHub\brun\chunks-alpha\src`
 
-It is a VITE application so the only use of it is so you can study the UI design and replicate it in Next.JS 14 for our application.
+So based on the above requirements and current functionality we need to fix the bug. In this task you are giving the next coding agent the information write up needed to answer questions and help us fix the bug. 
 
-So based on the above requirements and current functionality we need to write a detailed specification. In this task you are giving the next coding agent the information write up needed to answer questions and help us write the specification.
+Also I need to ask does the "Regeneration" button on the https://chunks-alpha.vercel.app/chunks/[doc-id]/dimensions/[dimension-id] page work? What does it do? Does it just regenerate the dimensions for that specific chunk? That's what it should do.
 
-In the next carryover file: **@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md** write a spec to get this done. Delete any sections which are not relevant.
+
+In the next carryover file: `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md` write a spec to get this done. Delete any sections which are not relevant.
 
 
 2. **Section Updates**
@@ -70,7 +66,7 @@ After updating the sections, review the entire file to ensure:
 
 ## 1. Primary Context Document
 REQUIRED: Carefully review the current context carryover document:
-**@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md**
+`C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md`
 
 You Must Focus on:
 - The ## Active Development Focus section
@@ -79,7 +75,7 @@ You Must Focus on:
 
 ## 2. Technical Specifications
 Review any technical specifications referenced in the "### Important Files" and "### Important Scripts, Markdown Files, and Specifications" sections of:
-**@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md**
+`C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md`
 
 Key areas to understand:
 - File purposes and roles
@@ -89,7 +85,7 @@ Key areas to understand:
 
 ## 3. Core Implementation Files
 Review the implementation files listed in the "### Important Files" section of:
-**@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md**
+`C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md`
 
 For each file, focus on:
 - File purpose and role
@@ -98,14 +94,14 @@ For each file, focus on:
 - Implementation notes
 
 ## 4. Review Process
-- Read each section of **@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md** carefully
+- Read each section of `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md` carefully
 - Cross-reference between context and implementation files
 - Note any dependencies or integration requirements
 - Identify potential implementation challenges
 
 ## 5. Development Continuity
 Review the "### Recent Development Context" section of:
-**@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md**
+`C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md`
 
 Focus on:
 - Last completed milestone
@@ -115,7 +111,7 @@ Focus on:
 
 ## 5. Restate the Active Development Focus
 Once you've completed this review process, please provide:
-1. A summary of the active development context as you understand it from reading the: ## Active Development Focus section of the **@C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md**
+1. A summary of the active development context as you understand it from reading the: ## Active Development Focus section of the `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\system\plans\context-carries\context-carry-info-10-11-25-317pm.md`
 2. Key technical considerations identified
 3. Any potential implementation challenges
 4. Questions or clarifications needed before proceeding

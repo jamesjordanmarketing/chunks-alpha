@@ -92,6 +92,7 @@ The current session has successfully deployed upload error handling improvements
    - Verify deployment includes the markdown JSON parser fix
    - Test dimension generation on deployed environment
    - **Expected Outcome**: Dimensions populate correctly on chunks screen
+       - **Test Result**: This is now working. Dimensions are being populated.
 
 2. **Fix Document Deletion Foreign Key Issue**
    - Investigate database schema for `workflow_sessions` table foreign key
@@ -99,6 +100,7 @@ The current session has successfully deployed upload error handling improvements
    - Implement solution in both database schema and application code
    - Test delete functionality on documents with and without workflow sessions
    - **Expected Outcome**: Documents can be deleted without constraint violations
+    - **Test Result**: This is now working. Documents can be deleted correctly.
 
 3. **Validate Both Fixes in Production**
    - Upload test document and verify text extraction works
