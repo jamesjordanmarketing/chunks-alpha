@@ -44,18 +44,20 @@ Complete these actions before running the generation prompt. These are prerequis
 
 **Recommendation:** Option C for first batch - iterate on proven Marcus structure before expanding.
 
-**Action Required:** Choose A, B, or C and note it when running the prompt.
+**Action Required:** Choose A, B, or C and note it when running the prompt.f
+
+**Choice Documentation:** we will choose C: "Marcus-Heavy"
 
 ### Action 3: Define Quality Acceptance Criteria
 **What:** Before reviewing the 10 conversations, define what "good enough to proceed to 100" means.
 
-**Suggested Criteria:**
-- [ ] All emotional progressions feel authentic (no jarring emotional jumps)
-- [ ] Elena's voice is consistent across all conversations  
-- [ ] Response strategies are appropriately matched to user emotional states
-- [ ] At least 8/10 conversations have quality_score of 4 or 5
-- [ ] Financial advice is accurate (no mathematical errors or dangerous recommendations)
-- [ ] Diverse emotional coverage (not just anxiety/shame in all 10)
+**Suggested Criteria:*
+- [Yes] All emotional progressions feel authentic (no jarring emotional jumps)
+- [Yes] Elena's voice is consistent across all conversations  
+- [Yes] Response strategies are appropriately matched to user emotional states
+- [Yes] At least 8/10 conversations have quality_score of 4 or 5
+- [Yes] Financial advice is accurate (no mathematical errors or dangerous recommendations)
+- [Yes] Diverse emotional coverage (not just anxiety/shame in all 10)
 
 **Action Required:** Review and modify criteria above, check boxes during review phase.
 
@@ -70,6 +72,7 @@ Complete these actions before running the generation prompt. These are prerequis
    - Quality Score (1-5)
    - Issues Found
    - Keep/Revise/Discard Decision
+**Spreadsheet Created:** here: `https://docs.google.com/spreadsheets/d/1rJHlxvYm2h_AUbPgV0KLEq5CwiV9beEwVRN3fOWjCRg/edit?usp=sharing`
 
 2. Plan 2-3 hours for review (approximately 15-20 minutes per conversation)
 
@@ -99,7 +102,8 @@ Complete these actions before running the generation prompt. These are prerequis
 
 ---
 
-# Task: Generate 10 Emotionally Intelligent Financial Planner Training Conversations
+
+# Prompt Task: Generate 10 Emotionally Intelligent Financial Planner Training Conversations
 
 ## Context & Purpose
 
@@ -109,7 +113,7 @@ You are generating training data for a LoRA fine-tuning dataset that will teach 
 
 **Business Vertical:** Financial planning consultant serving mid-career professionals  
 **Consultant Persona:** Elena Morales, CFP® - Pathways Financial Planning  
-**Output Format:** JSON following the structure in `c-alpha-build_v3.4_emotional-dataset-JSON-format_v2.json`
+**Output Format:** JSON following the structure in `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build_v3.4_emotional-dataset-JSON-format_v2.json`
 
 ---
 
@@ -118,14 +122,14 @@ You are generating training data for a LoRA fine-tuning dataset that will teach 
 Before generating any conversations, you MUST thoroughly read and internalize these source documents:
 
 ### 1. The Complete Seed Example
-**File:** `pmc/context-ai/pmct/c-alpha-build_v3.4_emotional-dataset-JSON-demo-marcus_v1.json`
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build_v3.4_emotional-dataset-JSON-demo-marcus_v1.json`
 
 **What it contains:**
 - A complete 4-turn conversation with Marcus Thompson
 - Full emotional annotation at every turn
 - Detailed response strategy selection and rationale
 - Sentence-by-sentence breakdown of why each response works
-- Training metadata and quality scoring
+- Training metadata and quality scoring4UU
 
 **Why it matters:** This is your GOLD STANDARD. Every conversation you generate must match or exceed this level of:
 - Emotional granularity in the `emotional_context` section
@@ -140,7 +144,7 @@ Before generating any conversations, you MUST thoroughly read and internalize th
 - How emotional progression is tracked across turns
 
 ### 2. The Consultant & Client Personas
-**File:** `system/chunks-alpha-data/financial-planner-demo-conversation-and-metadata_v1.txt`
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\system\chunks-alpha-data\V2-LoRA-customer-emotions-financial-planner-seed_v1.txt`
 
 **What it contains:**
 - Elena Morales' complete background, philosophy, and communication style
@@ -155,7 +159,7 @@ Before generating any conversations, you MUST thoroughly read and internalize th
 - How she adapts her approach to different emotional states
 
 ### 3. The JSON Format Structure
-**File:** `pmc/context-ai/pmct/c-alpha-build_v3.4_emotional-dataset-JSON-format_v2.json`
+**File:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build_v3.4_emotional-dataset-JSON-format_v2.json`
 
 **What it contains:**
 - Complete JSON schema with all required fields
@@ -224,10 +228,13 @@ Before generating any conversations, you MUST thoroughly read and internalize th
 
 ### Persona Distribution
 
-**Option 1 - Recommended for First Batch:**
+**Marcus-Heavy - Recommended for First Batch:**
 - 5 conversations with Marcus variations (different scenarios, emotions, topics)
 - 3 conversations with Jennifer
 - 2 conversations with David
+
+**Why:** Marcus' structure is proven. Creating variations teaches the model his pattern deeply before expanding.
+
 
 **Why:** Marcus' structure is proven. Creating variations teaches the model his pattern deeply before expanding.
 
@@ -246,14 +253,6 @@ Before generating any conversations, you MUST thoroughly read and internalize th
 **David Variations:** Pragmatic optimist, teacher
 - Balancing wedding costs with debt payoff
 - House down payment strategy
-
-**Option 2 - If You Want More Diversity:**
-- 2-3 conversations each for Marcus, Jennifer, David
-- 1-2 conversations with new personas:
-  - Young professional (25-30, high income, no financial knowledge)
-  - Pre-retiree (58-62, late-stage planning anxiety)
-  - Single parent (financial stress, time scarcity)
-  - Small business owner (complex financial situation)
 
 ### Response Strategy Requirements
 
@@ -424,7 +423,7 @@ After generating all 10, review for consistency:
 
 ### File Organization
 
-**Option A - Single File (Recommended for Review):**
+**We will use: Option A - Single File (Recommended for Review):**
 Create one JSON file with this structure:
 
 ```json
@@ -465,11 +464,6 @@ Create one JSON file with this structure:
   ]
 }
 ```
-
-**Option B - Separate Files:**
-Create 10 files named: `fp_conversation_001.json` through `fp_conversation_010.json`
-
-Each follows the Marcus demo structure (single conversation per file).
 
 ### Naming Conventions
 
@@ -655,7 +649,7 @@ Before submitting your 10 conversations, verify:
 
 **When complete, provide:**
 
-1. **The JSON file(s)** with all 10 conversations following the format in `c-alpha-build_v3.4_emotional-dataset-JSON-format_v2.json`
+1. **The JSON file(s)** with all 10 conversations following the format in `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build_v3.4_emotional-dataset-JSON-format_v2.json`
 
 2. **A summary table** with this format:
 
@@ -671,9 +665,13 @@ Before submitting your 10 conversations, verify:
    - What should be adjusted when scaling to the next 90?
    - Any concerns or questions about the format or approach?
 
+
+4. **Write the file to:** `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build_v3.4-LoRA-FP-convo-10-first_v1.json` 
+For any addendums, strategy, or follow up write to `C:\Users\james\Master\BrightHub\brun\chunks-alpha\pmc\context-ai\pmct\c-alpha-build_v3.4-LoRA-FP-convo-10-first_v1-documentation.md` 
 ---
 
 **END PROMPT**
+
 
 ---
 

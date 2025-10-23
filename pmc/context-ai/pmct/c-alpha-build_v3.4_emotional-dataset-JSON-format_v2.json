@@ -260,7 +260,7 @@
   },
 
   "example_usage": {
-    "single_conversation_file": "See: c-alpha-build_v3.4_emotional-dataset-JSON-demo-marcus_v1.json",
+    "single_conversation_file": "See: C:\\Users\\james\\Master\\BrightHub\\brun\\chunks-alpha\\pmc\\context-ai\\pmct\\c-alpha-build_v3.4_emotional-dataset-JSON-demo-marcus_v1.json",
     "multiple_conversations_file": "Create root key 'conversations' as array of complete conversation objects, each with dataset_metadata, consultant_profile, and training_pairs"
   }
 }
