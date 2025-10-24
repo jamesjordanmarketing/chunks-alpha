@@ -98,17 +98,24 @@ TOTAL: ~180-200 hours over 14 weeks
 - Access to Phase 1 conversations (1-10)
 - Tier strategy document reviewed
 
+I have changed this to be separate files for each scenario. So:
+
 **Actions:**
 
-1. **Create Master Scenario Matrix** (Excel/Google Sheets)
-   - **Tier 1 Tab:** 40 rows (conversations 11-50)
+1. **Create Master Scenario Matrix** (as local CSV in pmc\context-ai\pmct\quality-review\)
+   - **Tier 1 file named:** master-scenario-matrix-tier-1_v1: 40 rows (conversations 11-50)
      - Columns: Conv ID, Template Type (A-E), Topic, Persona Age, Persona Income, Emotional Start, Emotional End, Turn Count, Key Learning Objective, Notes
-   - **Tier 2 Tab:** 35 rows (conversations 51-85)
+   - **Tier 2 file named:** master-scenario-matrix-tier-2_v1: 35 rows (conversations 51-85)
      - Columns: Conv ID, Scenario Name, Complexity Level, Topic Category, Primary Emotions, Special Considerations, Turn Count, Expert Review Required (Finance/Therapy/Legal), Notes
-   - **Tier 3 Tab:** 15 rows (conversations 86-100)
+   - **Tier 3 file named:** master-scenario-matrix-tier-3_v1: 15 rows (conversations 86-100)
      - Columns: Conv ID, Edge Case Type, Boundary Being Tested, Referral Type, Crisis Level, Turn Count, Legal Review Required, Notes
 
-2. **Populate Tier 1 Template Assignments**
+So after creating the Master Scenario Matrix we will have 3 new files:
+pmc\context-ai\pmct\quality-review\master-scenario-matrix-tier-1_v1
+pmc\context-ai\pmct\quality-review\master-scenario-matrix-tier-2_v1
+pmc\context-ai\pmct\quality-review\master-scenario-matrix-tier-3_v1
+
+2. **Populate Tier 1 Template Assignments in file:** pmc\context-ai\pmct\quality-review\master-scenario-matrix-tier-1_v1
    - Assign 10 conversations to Template A (Confusion→Clarity)
    - Assign 8 conversations to Template B (Shame→Acceptance)
    - Assign 8 conversations to Template C (Couple Conflict→Alignment)
@@ -117,20 +124,20 @@ TOTAL: ~180-200 hours over 14 weeks
    - Vary persona age, income, and topics systematically
    - Ensure no duplicate combinations
 
-3. **Define Tier 2 Scenarios** (35 specific scenarios)
+3. **Define Tier 2 Scenarios in file:** pmc\context-ai\pmct\quality-review\master-scenario-matrix-tier-2_v1 (35 specific scenarios)
    - Write 2-3 sentence scenario description for each
    - Identify required emotional arc
    - Note special considerations (cultural, legal, therapeutic)
    - Flag which expert reviewers needed
 
-4. **Define Tier 3 Edge Cases** (15 specific cases)
+4. **Define Tier 3 Edge Cases in file:** pmc\context-ai\pmct\quality-review\master-scenario-matrix-tier-3_v1 (15 specific cases)
    - Write scenario description emphasizing boundary
    - Identify proper referral resources
    - Note any legal/ethical consultation needed
    - Document crisis protocols if applicable
 
 **Outputs:**
-- ✅ Master Scenario Matrix (Excel file with 90 rows)
+- ✅ 3 Master Scenario Matrix CSV files
 - ✅ All conversations pre-assigned to tiers and types
 - ✅ Systematic variation ensured
 - ✅ Expert review needs documented
